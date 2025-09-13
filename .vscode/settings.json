@@ -1,0 +1,20 @@
+{
+    "files.associations": {
+        "*.html": "jinja-html",
+        "stdarg.h": "c",
+        "vcruntime.h": "c",
+        "helpers.h": "c",
+        "windows.h": "c",
+        "winapifamily.h": "c",
+        "winpackagefamily.h": "c",
+        "stdio.h": "c",
+        "memory.h": "c",
+        "scanner.h": "c",
+        "iterator": "c",
+        "initializer_list": "c",
+        "type_traits": "c",
+        "xutility": "c",
+        "arrays.h": "c",
+        "stdbool.h": "c"
+    }
+}
