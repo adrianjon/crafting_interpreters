@@ -32,6 +32,16 @@ typedef enum
     FOR,
     RETURN,
     PRINT,
+    AND,
+    OR,
+    KW_TRUE,
+    KW_FALSE,
+    NIL,
+    VAR,
+    FUN,
+    CLASS,
+    SUPER,
+    KW_THIS,
     EOF_,
 } token_type_t;
 
@@ -39,7 +49,7 @@ extern const char* token_type_names[];
 
 typedef struct {
     token_type_t type;
-    char* lexeme;
+    char lexeme[256]; // max lexeme length
     int line;
 } token_t;
 #endif // LOX_TOKEN_H

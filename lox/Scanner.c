@@ -20,8 +20,24 @@ void scanner_read_file(const char* filename) {
     g_scanner.line = 1;
 }
 
-void add_token(token_type_t type, int line, dynamic_array_t* tokens) {
-    token_t token = { type, line };
+/*
+typedef struct {
+    token_type_t type;
+    char lexeme[256]; // max lexeme length
+    int line;
+} token_t;
+ */
+void add_token(token_type_t type, const char* lexeme, int line, dynamic_array_t* tokens) {
+    token_t token = { .type = type, .line = line };
+    
+    if (lexeme) {
+        size_t lex_len = 0;
+        while(lexeme[lex_len] != '\0' && lex_len < 255) {
+            lex_len++;
+        }
+        memory_copy(token.lexeme, lexeme, lex_len);
+        token.lexeme[lex_len] = '\0';
+    }
     array_push(tokens, &token, sizeof(token_t));
 }
 
@@ -100,6 +116,24 @@ bool is_alphanumeric(char c) {
 void identifier() {
     while (is_alphanumeric(scanner_peek())) scanner_advance();
 }
+/*
+    IF,
+    ELSE,
+    WHILE,
+    FOR,
+    RETURN,
+    PRINT,
+    AND,
+    OR,
+    KW_TRUE,
+    KW_FALSE,
+    NIL,
+    VAR,
+    FUN,
+    CLASS,
+    SUPER,
+    KW_THIS,
+*/
 token_type_t get_keyword_type(const char* identifier) {
     if (memory_compare(identifier, "if", 2)) return IF;
     if (memory_compare(identifier, "else", 4)) return ELSE;
@@ -107,6 +141,16 @@ token_type_t get_keyword_type(const char* identifier) {
     if (memory_compare(identifier, "for", 3)) return FOR;
     if (memory_compare(identifier, "return", 6)) return RETURN;
     if (memory_compare(identifier, "print", 5)) return PRINT;
+    if (memory_compare(identifier, "and", 3)) return AND;
+    if (memory_compare(identifier, "or", 2)) return OR;
+    if (memory_compare(identifier, "true", 4)) return KW_TRUE;
+    if (memory_compare(identifier, "false", 5)) return KW_FALSE;
+    if (memory_compare(identifier, "nil", 3)) return NIL;
+    if (memory_compare(identifier, "var", 3)) return VAR;
+    if (memory_compare(identifier, "fun", 3)) return FUN;
+    if (memory_compare(identifier, "class", 5)) return CLASS;
+    if (memory_compare(identifier, "super", 5)) return SUPER;
+    if (memory_compare(identifier, "this", 4)) return KW_THIS;
     return IDENTIFIER;
 }
 
@@ -117,116 +161,12 @@ void print_tokens(dynamic_array_t* tokens) {
         print(token_type_names[token->type]);
         print(" at line ");
         print_int(token->line);
+            if (token->lexeme) {
+                print(" with lexeme '");
+                print(token->lexeme);
+                print("'");
+            }
         print("\n");
     }
 }
 
-// Private functions
-
-// int main(void) {
-
-//     Scanner.target_file = read_file("lox");
-//     if(!Scanner.target_file) {
-//         print_error("Failed to read file");
-//         return 1;
-//     }
-//     Scanner.start = Scanner.target_file->buffer;
-//     Scanner.current = Scanner.target_file->buffer;
-//     Scanner.line = 1;
-
-//     print("file size: ");
-//     print_int(Scanner.target_file->size);
-//     print("\n");
-
-//     DynamicArray tokens = create_array(1024 * 1); // initial capacity for 1KB
-//     while(!isAtEnd() && Scanner.current < Scanner.start + Scanner.target_file->size) {
-//         char c = advance();
-//         //print_char(c);
-//         switch (c) {
-//             case '(': addToken(LEFT_PAREN, Scanner.line, &tokens); break;
-//             case ')': addToken(RIGHT_PAREN, Scanner.line, &tokens); break;
-//             case '{': addToken(LEFT_BRACE, Scanner.line, &tokens); break;
-//             case '}': addToken(RIGHT_BRACE, Scanner.line, &tokens); break;
-//             case ',': addToken(COMMA, Scanner.line, &tokens); break;
-//             case '.': addToken(DOT, Scanner.line, &tokens); break;
-//             case '+': addToken(PLUS, Scanner.line, &tokens); break;
-//             case '-': addToken(MINUS, Scanner.line, &tokens); break;
-//             case ';': addToken(SEMICOLON, Scanner.line, &tokens); break;
-//             case ':': addToken(COLON, Scanner.line, &tokens); break;
-//             case '*': addToken(STAR, Scanner.line, &tokens); break;
-//             case '!': addToken(match('=', peek()) ? BANG_EQUAL : BANG, Scanner.line, &tokens); break;
-//             case '=': addToken(match('=', peek()) ? EQUAL_EQUAL : EQUAL, Scanner.line, &tokens); break;
-//             case '<': addToken(match('=', peek()) ? LESS_EQUAL : LESS, Scanner.line, &tokens); break;
-//             case '>': addToken(match('=', peek()) ? GREATER_EQUAL : GREATER, Scanner.line, &tokens); break;
-//             case '/':
-//                 if (match('/', peek())) {
-//                     // Handle single-line comment
-//                     while (!isAtEnd() && *Scanner.current != '\n') {
-//                         Scanner.current++;
-//                     }
-//                 } else if (match('*', peek())) {
-//                     // Handle multi-line comment
-//                     unsigned int counter = 1; // counter for nested multi-line comments
-//                     while (!isAtEnd() && counter > 0) {
-//                         if (*Scanner.current == '\n') Scanner.line++;
-//                         if (*Scanner.current == '/' && peekNext() == '*') {
-//                             counter++;
-//                         } else if (*Scanner.current == '*' && peekNext() == '/') {
-//                             counter--;
-//                         }
-//                         Scanner.current++;
-//                     }
-//                     if (!isAtEnd()) {
-//                         // Consume the closing */
-//                         Scanner.current += 2;
-//                     } else {
-//                         print_error("Unterminated multi-line comment");
-//                     }
-//                 } else {
-//                     addToken(SLASH, Scanner.line, &tokens);
-//                 }
-//                 break;
-//             case ' ':
-//             case '\r':
-//             case '\t':
-//                 // Ignore whitespace and newlines
-//                 break;
-//             case '\n':
-//                 Scanner.line++;
-//                 break;
-//             case '"': string(); addToken(STRING, Scanner.line, &tokens); break;
-//             default: 
-//                 if (isDigit(c)) {
-//                     number();
-//                     addToken(NUMBER, Scanner.line, &tokens);
-//                 } else if (isAlpha(c)) {
-//                     const char* start = Scanner.current - 1;
-//                     identifier();
-//                     size_t length = Scanner.current - start;
-//                     char buffer[256] = {0}; // max identifier length
-//                     memcpy(buffer, start, length);
-//                     buffer[length] = '\0';
-//                     addToken(get_keyword_type(buffer), Scanner.line, &tokens);
-//                 } else {
-//                     print_error("Unexpected character"); 
-//                 }
-//                 break;
-//         }
-//     }
-//     addToken(EOF, Scanner.line, &tokens);
-//     // iterate through added tokens
-//     for(size_t i = 0; i < tokens.size / sizeof(Token); i++) {
-//         Token* token = (Token*)array_get(&tokens, i * sizeof(Token));
-//         print("Token: ");
-//         print(token_type_names[token->type]);
-//         print(" at line ");
-//         print_int(token->line);
-//         print("\n");
-//     }
-
-//     // GenerateAst();
-
-//     //write_file("test", "Hej\nhej", 7);
-//     // test_visitor_pattern();
-//     return 0;
-// }

@@ -1,12 +1,15 @@
 #include "extra/Memory.h"
 #include "extra/Arrays.h"
 #include "extra/Windows.h"
+#include "lox/Token.h"
 #include "lox/Scanner.h"
-#include "lox/Parser.c"
+
 // #include "tools/GenerateAst.c"
 
 int main(void) {
 
+
+    // TODO: This whole process should be in a function in scanner.c
     scanner_read_file("lox.txt");
 
     dynamic_array_t tokens = create_array(1024 * 1); // initial capacity for 1KB
@@ -15,21 +18,21 @@ int main(void) {
         char c = scanner_advance();
         //print_char(c);
         switch (c) {
-            case '(': add_token(LEFT_PAREN, scanner_get_line(), &tokens); break;
-            case ')': add_token(RIGHT_PAREN, scanner_get_line(), &tokens); break;
-            case '{': add_token(LEFT_BRACE, scanner_get_line(), &tokens); break;
-            case '}': add_token(RIGHT_BRACE, scanner_get_line(), &tokens); break;
-            case ',': add_token(COMMA, scanner_get_line(), &tokens); break;
-            case '.': add_token(DOT, scanner_get_line(), &tokens); break;
-            case '+': add_token(PLUS, scanner_get_line(), &tokens); break;
-            case '-': add_token(MINUS, scanner_get_line(), &tokens); break;
-            case ';': add_token(SEMICOLON, scanner_get_line(), &tokens); break;
-            case ':': add_token(COLON, scanner_get_line(), &tokens); break;
-            case '*': add_token(STAR, scanner_get_line(), &tokens); break;
-            case '!': add_token(match('=', scanner_peek()) ? BANG_EQUAL : BANG, scanner_get_line(), &tokens); break;
-            case '=': add_token(match('=', scanner_peek()) ? EQUAL_EQUAL : EQUAL, scanner_get_line(), &tokens); break;
-            case '<': add_token(match('=', scanner_peek()) ? LESS_EQUAL : LESS, scanner_get_line(), &tokens); break;
-            case '>': add_token(match('=', scanner_peek()) ? GREATER_EQUAL : GREATER, scanner_get_line(), &tokens); break;
+            case '(': add_token(LEFT_PAREN, NULL, scanner_get_line(), &tokens); break;
+            case ')': add_token(RIGHT_PAREN, NULL, scanner_get_line(), &tokens); break;
+            case '{': add_token(LEFT_BRACE, NULL, scanner_get_line(), &tokens); break;
+            case '}': add_token(RIGHT_BRACE, NULL, scanner_get_line(), &tokens); break;
+            case ',': add_token(COMMA, NULL, scanner_get_line(), &tokens); break;
+            case '.': add_token(DOT, NULL, scanner_get_line(), &tokens); break;
+            case '+': add_token(PLUS, NULL, scanner_get_line(), &tokens); break;
+            case '-': add_token(MINUS, NULL, scanner_get_line(), &tokens); break;
+            case ';': add_token(SEMICOLON, NULL, scanner_get_line(), &tokens); break;
+            case ':': add_token(COLON, NULL, scanner_get_line(), &tokens); break;
+            case '*': add_token(STAR, NULL, scanner_get_line(), &tokens); break;
+            case '!': add_token(match('=', scanner_peek()) ? BANG_EQUAL : BANG, NULL, scanner_get_line(), &tokens); break;
+            case '=': add_token(match('=', scanner_peek()) ? EQUAL_EQUAL : EQUAL, NULL, scanner_get_line(), &tokens); break;
+            case '<': add_token(match('=', scanner_peek()) ? LESS_EQUAL : LESS, NULL, scanner_get_line(), &tokens); break;
+            case '>': add_token(match('=', scanner_peek()) ? GREATER_EQUAL : GREATER, NULL, scanner_get_line(), &tokens); break;
             case '/':
                 if (match('/', scanner_peek())) {
                     // Handle single-line comment
@@ -55,7 +58,7 @@ int main(void) {
                         print_error("Unterminated multi-line comment");
                     }
                 } else {
-                    add_token(SLASH, scanner_get_line(), &tokens);
+                    add_token(SLASH, NULL, scanner_get_line(), &tokens);
                 }
                 break;
             case ' ':
@@ -64,26 +67,44 @@ int main(void) {
             case '\n':
                 // Ignore whitespace and newlines
                 break;
-            case '"': string(); add_token(STRING, scanner_get_line(), &tokens); break;
+            case '"':
+                const char* start = scanner_previous();
+                string();
+                size_t length = scanner_peek_ptr() - start;
+                char buffer[256] = {0}; // max string length
+                memory_copy(buffer, start + 1, length - 2); // exclude quotes
+                buffer[length - 2] = '\0';
+
+                add_token(STRING, (const char*)buffer, scanner_get_line(), &tokens); break;
             default: 
                 if (is_digit(c)) {
+                    const char* start = scanner_previous();
                     number();
-                    add_token(NUMBER, scanner_get_line(), &tokens);
+                    size_t length = scanner_peek_ptr() - start;
+                    char buffer[256] = {0}; // max number length
+                    memory_copy(buffer, start, length);
+                    buffer[length] = '\0';
+                    // printf("number length: %zu\n", length);
+                    // printf("start char: '%c'\n", *start);
+                    // printf("Number: %s\n", buffer);
+                    add_token(NUMBER, (const char*)buffer, scanner_get_line(), &tokens);
                 } else if (is_alpha(c)) {
                     const char* start = scanner_previous();
                     identifier();
-                    size_t length = scanner_peek_ptr() - start; //change scanner_peek() to return a ptr
+                    size_t length = scanner_peek_ptr() - start;
                     char buffer[256] = {0}; // max identifier length
                     memory_copy(buffer, start, length);
                     buffer[length] = '\0';
-                    add_token(get_keyword_type(buffer), scanner_get_line(), &tokens);
+                    token_type_t type = get_keyword_type(buffer);
+                    printf("buffer: '%s' length: %zu\n", buffer, length);
+                    add_token(type, (const char*)buffer, scanner_get_line(), &tokens);
                 } else {
                     print_error("Unexpected character"); 
                 }
                 break;
         }
     }
-    add_token(EOF, scanner_get_line(), &tokens);
+    add_token(EOF_, NULL, scanner_get_line(), &tokens);
     print_tokens(&tokens);
 
 

@@ -25,7 +25,7 @@ const char* scanner_peek_ptr(void);
 int scanner_get_line(void);
 const char* scanner_previous(void);
 
-void add_token(token_type_t type, int line, dynamic_array_t* tokens);
+void add_token(token_type_t type, const char* lexeme, int line, dynamic_array_t* tokens);
 static size_t MAX_SOURCE_LENGTH = 1024 * 1024; // 1MB
 bool match(char expected, char actual);
 void string();

@@ -1,6 +1,6 @@
 // My first Lox program
 if (x != 5)
-if (x == 5)
+if (x == 4)
 /*
 yrd
 */
