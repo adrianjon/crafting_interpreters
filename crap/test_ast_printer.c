@@ -61,11 +61,11 @@ int main(void) {
     stmt_t stmt = {
         .type = STMT_PRINT,
         .as.print_stmt = {
-            .expression = &expr2
+            .expression = &expr
         }
     };
 
-    ast_printer_print(&printer, &stmt);
+    printf("\nAST: %s\n", ast_printer_print_stmt(&printer, &stmt));
     //ast_printer_print(&printer, &expr);
-    printf("\nAST: %s\n", sb.buffer);
+    // printf("\nAST: %s\n", sb.buffer);
 }

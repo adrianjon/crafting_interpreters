@@ -15,8 +15,8 @@ typedef struct ast_printer {
 void ast_printer_init(ast_printer_t* printer_p, string_builder_t* sb_p);
 
 // Entry points
-void ast_printer_print_expr(ast_printer_t* printer_p, const expr_t* expr_p);
-void ast_printer_print_stmt(ast_printer_t* printer_p, const stmt_t* stmt_p);
+char* ast_printer_print_expr(ast_printer_t* printer_p, const expr_t* expr_p);
+char* ast_printer_print_stmt(ast_printer_t* printer_p, const stmt_t* stmt_p);
 
 // One-call, type-agnostic entry (compile-time dispatch with _Generic in C11+).
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
