@@ -16,23 +16,37 @@ int main(void) {
 
     while(!scanner_is_at_end()) {
         char c = scanner_advance();
+        bool is_equal;
         //print_char(c);
         switch (c) {
-            case '(': add_token(LEFT_PAREN, NULL, scanner_get_line(), &tokens); break;
-            case ')': add_token(RIGHT_PAREN, NULL, scanner_get_line(), &tokens); break;
-            case '{': add_token(LEFT_BRACE, NULL, scanner_get_line(), &tokens); break;
-            case '}': add_token(RIGHT_BRACE, NULL, scanner_get_line(), &tokens); break;
-            case ',': add_token(COMMA, NULL, scanner_get_line(), &tokens); break;
-            case '.': add_token(DOT, NULL, scanner_get_line(), &tokens); break;
-            case '+': add_token(PLUS, NULL, scanner_get_line(), &tokens); break;
-            case '-': add_token(MINUS, NULL, scanner_get_line(), &tokens); break;
-            case ';': add_token(SEMICOLON, NULL, scanner_get_line(), &tokens); break;
-            case ':': add_token(COLON, NULL, scanner_get_line(), &tokens); break;
-            case '*': add_token(STAR, NULL, scanner_get_line(), &tokens); break;
-            case '!': add_token(match('=', scanner_peek()) ? BANG_EQUAL : BANG, NULL, scanner_get_line(), &tokens); break;
-            case '=': add_token(match('=', scanner_peek()) ? EQUAL_EQUAL : EQUAL, NULL, scanner_get_line(), &tokens); break;
-            case '<': add_token(match('=', scanner_peek()) ? LESS_EQUAL : LESS, NULL, scanner_get_line(), &tokens); break;
-            case '>': add_token(match('=', scanner_peek()) ? GREATER_EQUAL : GREATER, NULL, scanner_get_line(), &tokens); break;
+            case '(': add_token(LEFT_PAREN, "(", scanner_get_line(), &tokens); break;
+            case ')': add_token(RIGHT_PAREN, ")", scanner_get_line(), &tokens); break;
+            case '{': add_token(LEFT_BRACE, "{", scanner_get_line(), &tokens); break;
+            case '}': add_token(RIGHT_BRACE, "}", scanner_get_line(), &tokens); break;
+            case ',': add_token(COMMA, ",", scanner_get_line(), &tokens); break;
+            case '.': add_token(DOT, ".", scanner_get_line(), &tokens); break;
+            case '+': add_token(PLUS, "+", scanner_get_line(), &tokens); break;
+            case '-': add_token(MINUS, "-", scanner_get_line(), &tokens); break;
+            case ';': add_token(SEMICOLON, ";", scanner_get_line(), &tokens); break;
+            case ':': add_token(COLON, ":", scanner_get_line(), &tokens); break;
+            case '*': add_token(STAR, "*", scanner_get_line(), &tokens); break;
+            case '!':
+                is_equal = match('=', scanner_peek());
+                add_token(is_equal ? BANG_EQUAL : BANG, is_equal ? "!=" : "!", scanner_get_line(), &tokens);
+                break;
+            // TODO: fix this bug here in case of == first match returns EQUAL (should be EQUAL_EQUAL) second returns ==
+            case '=':
+                is_equal = match('=', scanner_peek());
+                add_token(is_equal ? EQUAL_EQUAL : EQUAL, is_equal ? "==" : "=", scanner_get_line(), &tokens);
+                break;
+            case '<':
+                is_equal = match('=', scanner_peek());
+                add_token(is_equal ? LESS_EQUAL : LESS, is_equal ? "<=" : "<", scanner_get_line(), &tokens);
+                break;
+            case '>':
+                is_equal = match('=', scanner_peek());
+                add_token(is_equal ? GREATER_EQUAL : GREATER, is_equal ? ">=" : ">", scanner_get_line(), &tokens);
+                break;
             case '/':
                 if (match('/', scanner_peek())) {
                     // Handle single-line comment

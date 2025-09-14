@@ -14,15 +14,15 @@
 typedef struct stmt stmt_t;
 typedef struct stmt_visitor stmt_visitor_t;
 struct stmt_visitor {
-		void* (*visit_block)(stmt_t* stmt, stmt_visitor_t* visitor, void* context);
-		void* (*visit_function)(stmt_t* stmt, stmt_visitor_t* visitor, void* context);
-		void* (*visit_class)(stmt_t* stmt, stmt_visitor_t* visitor, void* context);
-		void* (*visit_expression)(stmt_t* stmt, stmt_visitor_t* visitor, void* context);
-		void* (*visit_if)(stmt_t* stmt, stmt_visitor_t* visitor, void* context);
-		void* (*visit_print)(stmt_t* stmt, stmt_visitor_t* visitor, void* context);
-		void* (*visit_return)(stmt_t* stmt, stmt_visitor_t* visitor, void* context);
-		void* (*visit_var)(stmt_t* stmt, stmt_visitor_t* visitor, void* context);
-		void* (*visit_while)(stmt_t* stmt, stmt_visitor_t* visitor, void* context);
+		void* (*visit_block)(const stmt_t* stmt, const stmt_visitor_t* visitor, void* context);
+		void* (*visit_function)(const stmt_t* stmt, const stmt_visitor_t* visitor, void* context);
+		void* (*visit_class)(const stmt_t* stmt, const stmt_visitor_t* visitor, void* context);
+		void* (*visit_expression)(const stmt_t* stmt, const stmt_visitor_t* visitor, void* context);
+		void* (*visit_if)(const stmt_t* stmt, const stmt_visitor_t* visitor, void* context);
+		void* (*visit_print)(const stmt_t* stmt, const stmt_visitor_t* visitor, void* context);
+		void* (*visit_return)(const stmt_t* stmt, const stmt_visitor_t* visitor, void* context);
+		void* (*visit_var)(const stmt_t* stmt, const stmt_visitor_t* visitor, void* context);
+		void* (*visit_while)(const stmt_t* stmt, const stmt_visitor_t* visitor, void* context);
 };
 
 
@@ -109,6 +109,6 @@ struct stmt {
 	} as;
 };
 
-void* stmt_accept(stmt_t* stmt, stmt_visitor_t* visitor, void* context);
+void* stmt_accept(const stmt_t* stmt, const stmt_visitor_t* visitor, void* context);
 
 #endif // STMT_H

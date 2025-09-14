@@ -14,18 +14,18 @@
 typedef struct expr expr_t;
 typedef struct expr_visitor expr_visitor_t;
 struct expr_visitor {
-		void* (*visit_assign)(expr_t* expr, expr_visitor_t* visitor, void* context);
-		void* (*visit_binary)(expr_t* expr, expr_visitor_t* visitor, void* context);
-		void* (*visit_call)(expr_t* expr, expr_visitor_t* visitor, void* context);
-		void* (*visit_get)(expr_t* expr, expr_visitor_t* visitor, void* context);
-		void* (*visit_grouping)(expr_t* expr, expr_visitor_t* visitor, void* context);
-		void* (*visit_literal)(expr_t* expr, expr_visitor_t* visitor, void* context);
-		void* (*visit_logical)(expr_t* expr, expr_visitor_t* visitor, void* context);
-		void* (*visit_set)(expr_t* expr, expr_visitor_t* visitor, void* context);
-		void* (*visit_super)(expr_t* expr, expr_visitor_t* visitor, void* context);
-		void* (*visit_this)(expr_t* expr, expr_visitor_t* visitor, void* context);
-		void* (*visit_unary)(expr_t* expr, expr_visitor_t* visitor, void* context);
-		void* (*visit_variable)(expr_t* expr, expr_visitor_t* visitor, void* context);
+		void* (*visit_assign)(const expr_t* expr, const expr_visitor_t* visitor, void* context);
+		void* (*visit_binary)(const expr_t* expr, const expr_visitor_t* visitor, void* context);
+		void* (*visit_call)(const expr_t* expr, const expr_visitor_t* visitor, void* context);
+		void* (*visit_get)(const expr_t* expr, const expr_visitor_t* visitor, void* context);
+		void* (*visit_grouping)(const expr_t* expr, const expr_visitor_t* visitor, void* context);
+		void* (*visit_literal)(const expr_t* expr, const expr_visitor_t* visitor, void* context);
+		void* (*visit_logical)(const expr_t* expr, const expr_visitor_t* visitor, void* context);
+		void* (*visit_set)(const expr_t* expr, const expr_visitor_t* visitor, void* context);
+		void* (*visit_super)(const expr_t* expr, const expr_visitor_t* visitor, void* context);
+		void* (*visit_this)(const expr_t* expr, const expr_visitor_t* visitor, void* context);
+		void* (*visit_unary)(const expr_t* expr, const expr_visitor_t* visitor, void* context);
+		void* (*visit_variable)(const expr_t* expr, const expr_visitor_t* visitor, void* context);
 };
 
 
@@ -135,6 +135,6 @@ struct expr {
 	} as;
 };
 
-void* expr_accept(expr_t* expr, expr_visitor_t* visitor, void* context);
+void* expr_accept(const expr_t* expr, const expr_visitor_t* visitor, void* context);
 
 #endif // EXPR_H

@@ -1,7 +1,19 @@
 // My first Lox program
+var hej = "Hello, World!";
+var x = 4;
 if (x != 5)
 if (x == 4)
 /*
 yrd
 */
 print "Hello, World!";
+/*
+fun add(a, b) {
+    if (a >= b) {
+        return nil;
+    } else if (a <= b) {
+        return 0;
+    }
+    return a + b;
+}
+*/

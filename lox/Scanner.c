@@ -72,6 +72,7 @@ const char* scanner_peek_ptr(void) {
 }
 
 bool match(char expected, char actual) {
+    //printf("match: expected '%c', actual '%c'\n", expected, actual);
     if (scanner_is_at_end()) return false;
     if (*g_scanner.p_current != expected) return false;
     g_scanner.p_current++;

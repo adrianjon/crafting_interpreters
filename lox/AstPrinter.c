@@ -2,192 +2,137 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include "../extra/Arrays.h"
 #include "Expr.h"
 #include "Stmt.h"
 #include "Token.h"
 #include "Object.h"
+#include "AstPrinter.h"
 
-// Simple string builder for demonstration
-typedef struct {
-    char* buf;
-    size_t cap;
-    size_t len;
-} string_builder_tt;
+// ------------ Small private helper functions ------------
 
-void sb_init(string_builder_tt* sb) {
-    sb->cap = 256;
-    sb->len = 0;
-    sb->buf = malloc(sb->cap);
-    sb->buf[0] = '\0';
-}
-
-void sb_append(string_builder_tt* sb, const char* str) {
-    size_t slen = strlen(str);
-    if (sb->len + slen + 1 > sb->cap) {
-        sb->cap *= 2;
-        sb->buf = realloc(sb->buf, sb->cap);
-    }
-    strcpy(sb->buf + sb->len, str);
-    sb->len += slen;
-    sb->buf[sb->len] = '\0';
-}
-
-void sb_free(string_builder_tt* sb) {
-    free(sb->buf);
-}
-
-// Forward declaration for recursive printing
-void* print_expr(expr_t* expr, void* context);
-const char* parenthesize(const char* name, expr_visitor_t* visitor, void* context, int count, ...);
-
-
-// Visitor functions
-void* visit_assign(expr_t* expr, void* context) {
-    // string_builder_tt* sb = (string_builder_tt*)context;
-    // sb_append(sb, "(= ");
-    // //sb_append(sb, expr->as.assign_expr.name.lexeme);
-    // sb_append(sb, expr->as.assign_expr.name->lexeme);
-    // sb_append(sb, " ");
-    // // print_expr(expr->as.assign_expr.value, sb);
-    // sb_append(sb, ")");
-    return NULL;
-}
-
-void* visit_binary(expr_t* expr, expr_visitor_t* visitor, void* context) {
-    //printf("Visiting binary expression\n");
-    const char* result = parenthesize(expr->as.binary_expr.operator->lexeme, visitor, context, 2, expr->as.binary_expr.left, expr->as.binary_expr.right);
-    return (void*)result;
-}
-const char* parenthesize(const char* name, expr_visitor_t* visitor, void* context, int count, ...) {
-    string_builder_tt* sb = (string_builder_tt*)context;
-    sb_append(sb, "(");
-    sb_append(sb, name);
-    printf("(%s", name);
-    va_list args;
-    va_start(args, count);
-    for (int i = 0; i < count; i++) {
-        sb_append(sb, " ");
-        printf(" ");
-        expr_t* expr = va_arg(args, expr_t*);
-        // printf("expr: %d\n", expr->type);
-        expr_accept(expr, visitor, context);
-    }
-    sb_append(sb, ")");
-    printf(")");
-    va_end(args);
-
-    return NULL;
-}
-void *visit_literal(expr_t* expr, expr_visitor_t* visitor, void* context) {
-    string_builder_tt* sb = (string_builder_tt*)context;
-    if (expr->as.literal_expr.value == NULL) {
-        sb_append(sb, "nil");
-        printf("nil");
-    } else {
-        // Here you would convert the object to string based on its type
-        if (expr->as.literal_expr.value->type == OBJECT_NUMBER) {
-            char num_buf[32];
-            snprintf(num_buf, sizeof(num_buf), "%g", expr->as.literal_expr.value->as.number.value);
-            sb_append(sb, num_buf);
-            printf("%s", num_buf);
-        }
-        else {
-            sb_append(sb, "literal");
-            printf("literal");
-        }
-    }
-    return NULL;
-}
-int main(void) {
-    printf("\tAstPrinter\n");
-    string_builder_tt sb;
-    sb_init(&sb);
-
-    // Example usage with a binary expression
-    token_t plus = { .type = PLUS, .lexeme = "+", .line = 1 };
-
-    expr_visitor_t visitor = {
-       // .visit_assign = visit_assign,
-        .visit_binary = visit_binary,
-        .visit_literal = visit_literal,
-        // ... assign other function pointers
-    };
-
-    expr_t expr = {
-        .type = EXPR_BINARY,
-        .as.binary_expr = {
-            .left = &(expr_t){
-                .type = EXPR_LITERAL,
-                .as.literal_expr = {
-                    .value = &(object_t){
-                        .type = OBJECT_NUMBER,
-                        .as.number = { .value = 1.0 }
-                    }
-                }
-            },
-            .operator = &plus,
-            .right = &(expr_t){
-                .type = EXPR_LITERAL,
-                .as.literal_expr = {
-                    .value = &(object_t){
-                        .type = OBJECT_NUMBER,
-                        .as.number = { .value = 2.0 }
-                    }
-                }
+static void print_object(string_builder_t* sb_p, const object_t* obj_p) {
+    switch (obj_p->type) {
+        case OBJECT_STRING:
+            append_string(sb_p, "\"");
+            append_string(sb_p, obj_p->as.string.value);
+            append_string(sb_p, "\"");
+            break;
+        case OBJECT_NUMBER: //
+            {
+                char num_buf[32] = {0};
+                snprintf(num_buf, sizeof(num_buf), "%g", obj_p->as.number.value);
+                append_string(sb_p, num_buf);
             }
-        }
-    };
-
-    expr_t expr2 = {
-        .type = EXPR_BINARY,
-        .as.binary_expr = {
-            .left = &(expr_t){
-                .type = EXPR_BINARY,
-                .as.binary_expr = {
-                    .left = &(expr_t){
-                        .type = EXPR_LITERAL,
-                        .as.literal_expr = {
-                            .value = &(object_t){
-                                .type = OBJECT_NUMBER,
-                                .as.number = { .value = 1.0 }
-                            }
-                        }
-                    },
-                    .operator = &plus,
-                    .right = &(expr_t){
-                        .type = EXPR_LITERAL,
-                        .as.literal_expr = {
-                            .value = &(object_t){
-                                .type = OBJECT_NUMBER,
-                                .as.number = { .value = 2.0 }
-                            }
-                        }
-                    }
-                }
-            },
-            .operator = &plus,
-            .right = &(expr_t){
-                .type = EXPR_LITERAL,
-                .as.literal_expr = {
-                    .value = &(object_t){
-                        .type = OBJECT_NUMBER,
-                        .as.number = { .value = 2.0 }
-                    }
-                }
-            }
-        }
-    };
-
-    expr_accept(&expr2, &visitor, &sb);
-    // printf("\n");
-
-    // printf("AST: %s\n", sb.buf);
-    // printf("string builder capacity: %zu\n", sb.cap);
-    // printf("string builder length: %zu\n", sb.len);
-    // print_expr(&expr, &sb);
-    // printf("string builder length after print: %zu\n", sb.len);
-    // printf("%s\n", sb.buf);
-
-    sb_free(&sb);
-    return 0;
+            break;
+        default:
+            append_string(sb_p, "literal");
+            break;
+    }
 }
+
+// ---------- Fallbacks (so missing visitors don't segfault) ----------
+
+static void* ap_unimpl_expr(const expr_t* expr, const expr_visitor_t* v, void* ctx) {
+    (void)expr; (void)v;
+    ast_printer_t* p = (ast_printer_t*)ctx;
+    append_string(p->sb_p, "<unimpl-expr>");
+    return NULL;
+}
+
+static void* ap_unimpl_stmt(const stmt_t* stmt, const stmt_visitor_t* v, void* ctx) {
+    (void)stmt; (void)v;
+    ast_printer_t* p = (ast_printer_t*)ctx;
+    append_string(p->sb_p, "<unimpl-stmt>");
+    return NULL;
+}
+
+// ---------------------------------------------------------------------
+
+static void* visit_literal_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
+    ast_printer_t* printer_p = (ast_printer_t*)context;
+    print_object(printer_p->sb_p, expr->as.literal_expr.value);
+    return NULL;
+}
+static void* visit_print_stmt(const stmt_t* stmt, const stmt_visitor_t* visitor, void* context) {
+    ast_printer_t* printer_p = (ast_printer_t*)context;
+    append_string(printer_p->sb_p, "(print ");
+    expr_accept(stmt->as.print_stmt.expression, &printer_p->expr_visitor, context);
+    append_string(printer_p->sb_p, ")");
+    return NULL;
+}
+
+static void* visit_unary_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
+    ast_printer_t* printer_p = (ast_printer_t*)context;
+    append_string(printer_p->sb_p, "(");
+    append_string(printer_p->sb_p, expr->as.unary_expr.operator->lexeme);
+    append_string(printer_p->sb_p, " ");
+    expr_accept(expr->as.unary_expr.right, &printer_p->expr_visitor, context);
+    append_string(printer_p->sb_p, ")");
+    return NULL;
+}
+
+static void* visit_binary_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
+    ast_printer_t* printer_p = (ast_printer_t*)context;
+    append_string(printer_p->sb_p, "(");
+    append_string(printer_p->sb_p, expr->as.binary_expr.operator->lexeme);
+    append_string(printer_p->sb_p, " ");
+    expr_accept(expr->as.binary_expr.left, &printer_p->expr_visitor, context);
+    append_string(printer_p->sb_p, " ");
+    expr_accept(expr->as.binary_expr.right, &printer_p->expr_visitor, context);
+    append_string(printer_p->sb_p, ")");
+    return NULL;
+}
+
+
+
+// --------------- Public API implementations ----------------
+
+void ast_printer_init(ast_printer_t* printer_p, string_builder_t* sb_p) {
+    if (printer_p == NULL || sb_p == NULL) {
+        fprintf(stderr, "Error: ast_printer_init received NULL pointer\n");
+        exit(EXIT_FAILURE);
+    }
+    printer_p->sb_p = sb_p;
+
+    // Initialize all visitor function pointers to unimplemented fallbacks
+    printer_p->expr_visitor.visit_assign = ap_unimpl_expr;
+    printer_p->expr_visitor.visit_binary = ap_unimpl_expr;
+    printer_p->expr_visitor.visit_call = ap_unimpl_expr;
+    printer_p->expr_visitor.visit_get = ap_unimpl_expr;
+    printer_p->expr_visitor.visit_grouping = ap_unimpl_expr;
+    printer_p->expr_visitor.visit_literal = ap_unimpl_expr;
+    printer_p->expr_visitor.visit_logical = ap_unimpl_expr;
+    printer_p->expr_visitor.visit_set = ap_unimpl_expr;
+    printer_p->expr_visitor.visit_super = ap_unimpl_expr;
+    printer_p->expr_visitor.visit_this = ap_unimpl_expr;
+    printer_p->expr_visitor.visit_unary = ap_unimpl_expr;
+    printer_p->expr_visitor.visit_variable = ap_unimpl_expr;
+
+    printer_p->stmt_visitor.visit_block = ap_unimpl_stmt;
+    printer_p->stmt_visitor.visit_function = ap_unimpl_stmt;
+    printer_p->stmt_visitor.visit_class = ap_unimpl_stmt;
+    printer_p->stmt_visitor.visit_expression = ap_unimpl_stmt;
+    printer_p->stmt_visitor.visit_if = ap_unimpl_stmt;
+    printer_p->stmt_visitor.visit_print = ap_unimpl_stmt;
+    printer_p->stmt_visitor.visit_return = ap_unimpl_stmt;
+    printer_p->stmt_visitor.visit_var = ap_unimpl_stmt;
+    printer_p->stmt_visitor.visit_while = ap_unimpl_stmt;
+
+    // Wire up the expression visitor function pointers
+    printer_p->expr_visitor.visit_binary = visit_binary_expr;
+    printer_p->expr_visitor.visit_literal = visit_literal_expr;
+    printer_p->expr_visitor.visit_unary = visit_unary_expr;
+
+    // Wire up the statement visitor function pointers
+    printer_p->stmt_visitor.visit_print = visit_print_stmt;
+}
+
+void ast_printer_print_expr(ast_printer_t* printer_p, const expr_t* expr_p) {
+    expr_accept((expr_t*)expr_p, &printer_p->expr_visitor, (void*)printer_p);
+}
+
+void ast_printer_print_stmt(ast_printer_t* printer_p, const stmt_t* stmt_p) {
+    stmt_accept((stmt_t*)stmt_p, &printer_p->stmt_visitor, (void*)printer_p);
+}
+

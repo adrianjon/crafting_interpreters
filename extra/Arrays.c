@@ -40,6 +40,7 @@ string_builder_t create_string_builder(void) {
     }
     sb.length = 0;
     sb.capacity = 1024;
+    sb.buffer[0] = '\0';
     return sb;
 }
 
@@ -58,6 +59,7 @@ void append_string(string_builder_t* sb, const char* str) {
     }
     memory_copy(sb->buffer + sb->length, str, len);
     sb->length += len;
+    sb->buffer[sb->length] = '\0'; // Null-terminate the string
 }
 
 char* string_to_uppercase(const char* str) {

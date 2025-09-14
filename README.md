@@ -1,6 +1,6 @@
 # TODO List
 
-- [ ] Add support for lexemes for all token types
+- [x] Add support for lexemes for all token types
 - [ ] Move project to its own directory
 - [ ] Start building the parser
 
@@ -24,7 +24,11 @@ Operators and punctuation.
 A mix of print/var/if/while/for/return.
 Verify token type sequence and lexeme string values.
 Confirm EOF_ is present and line numbers are correct.
-Phase 2 — Add a Statement Printer visitor (for debugging) 5) Plan reuse of your expression printer
+
+
+Phase 2 — Add a Statement Printer visitor (for debugging) 
+
+5) Plan reuse of your expression printer
 
 Option A (recommended): refactor AstPrinter into ExprPrinter.h/ExprPrinter.c exposing a function like char* expr_to_string(expr_t*), returning heap-allocated text.
 Option B: duplicate a minimal expression printer inside the statement printer (faster now, more code to maintain later).
