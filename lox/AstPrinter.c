@@ -9,14 +9,18 @@
 #include "Object.h"
 #include "AstPrinter.h"
 
+// TODO: Split this into ast printer using push-sink (string builder) and
+// ast to string functions that return newly allocated strings.
+// Currently mixing both approaches.
+
 // ------------ Small private helper functions ------------
 
 static void print_object(string_builder_t* sb_p, const object_t* obj_p) {
     switch (obj_p->type) {
         case OBJECT_STRING:
-            append_string(sb_p, "\"");
+            append_string(sb_p, "(\"");
             append_string(sb_p, obj_p->as.string.value);
-            append_string(sb_p, "\"");
+            append_string(sb_p, "\")");
             break;
         case OBJECT_NUMBER:
             {
@@ -53,7 +57,7 @@ static char* str_printf(const char* fmt, ...) {
 static char* obj_to_string(const object_t* obj_p) {
     if (!obj_p) return "nil";
     switch (obj_p->type) {
-        case OBJECT_STRING: return str_printf("\"%s\"", obj_p->as.string.value ? obj_p->as.string.value : "(null)");
+        case OBJECT_STRING: return str_printf("\"%s\"", obj_p->as.string.value ? obj_p->as.string.value : "");
         case OBJECT_NUMBER: return str_printf("%g", obj_p->as.number.value);
         // TODO: handle bool, function, class, instance, native
         default: return "<object>";
@@ -83,15 +87,15 @@ static void* ap_unimpl_stmt(const stmt_t* stmt, const stmt_visitor_t* v, void* c
 // ---------------------------------------------------------------------
 
 static void* visit_literal_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
-    //ast_printer_t* printer_p = (ast_printer_t*)context;
-    //print_object(printer_p->sb_p, expr->as.literal_expr.value);
+    ast_printer_t* printer_p = (ast_printer_t*)context;
+    print_object(printer_p->sb_p, expr->as.literal_expr.value);
     return obj_to_string(expr->as.literal_expr.value);
 }
 static void* visit_print_stmt(const stmt_t* stmt, const stmt_visitor_t* visitor, void* context) {
     ast_printer_t* printer_p = (ast_printer_t*)context;
-    // append_string(printer_p->sb_p, "(print ");
+    append_string(printer_p->sb_p, "(print ");
     char* e = (char*)expr_accept(stmt->as.print_stmt.expression, &printer_p->expr_visitor, context);
-    // append_string(printer_p->sb_p, ")");
+    append_string(printer_p->sb_p, ")");
     return paren1("print", e);
 }
 
@@ -102,19 +106,19 @@ static void* visit_unary_expr(const expr_t* expr, const expr_visitor_t* visitor,
     append_string(printer_p->sb_p, " ");
     expr_accept(expr->as.unary_expr.right, &printer_p->expr_visitor, context);
     append_string(printer_p->sb_p, ")");
-    return NULL;
+    return NULL; // TODO: return string instead
 }
 
 static void* visit_binary_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
     ast_printer_t* printer_p = (ast_printer_t*)context;
     append_string(printer_p->sb_p, "(");
-    append_string(printer_p->sb_p, expr->as.binary_expr.operator->lexeme);
-    append_string(printer_p->sb_p, " ");
     expr_accept(expr->as.binary_expr.left, &printer_p->expr_visitor, context);
+    append_string(printer_p->sb_p, " ");
+    append_string(printer_p->sb_p, expr->as.binary_expr.operator->lexeme);
     append_string(printer_p->sb_p, " ");
     expr_accept(expr->as.binary_expr.right, &printer_p->expr_visitor, context);
     append_string(printer_p->sb_p, ")");
-    return NULL;
+    return NULL; // TODO: return string instead
 }
 
 

@@ -247,6 +247,7 @@ bool memory_copy(void* dest, const void* src, size_t n)
     // *d = *s;
     // printf("%c\n", ((char*)dest)[0]);
     while (n-- != 0) {
+        
         *d++ = *s++;
     }
     return true;

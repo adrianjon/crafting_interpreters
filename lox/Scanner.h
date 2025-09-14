@@ -15,7 +15,7 @@ typedef struct {
 } scanner_t;
 
 // API
-
+int scanner_main(dynamic_array_t* tokens);
 void scanner_read_file(const char* filename);
 bool scanner_is_at_end(void);
 char scanner_advance(void);

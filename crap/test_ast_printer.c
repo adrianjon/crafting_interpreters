@@ -65,7 +65,7 @@ int main(void) {
         }
     };
 
-    printf("\nAST: %s\n", ast_printer_print_stmt(&printer, &stmt));
-    //ast_printer_print(&printer, &expr);
-    // printf("\nAST: %s\n", sb.buffer);
+    //printf("\nAST: %s\n", ast_printer_print_stmt(&printer, &stmt));
+    ast_printer_print(&printer, &expr2);
+    printf("\nAST: %s\n", sb.buffer);
 }
