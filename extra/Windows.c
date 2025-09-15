@@ -1,4 +1,6 @@
+#pragma warning(disable: 5105) // disable warning about macro redefinition
 #include <windows.h>
+#pragma warning(default: 5105) // enable warning about macro redefinition
 #include "Memory.h"
 #include "Windows.h"
 

@@ -2,7 +2,9 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdlib.h>
 #include "../extra/Arrays.h"
+#include "../extra/Memory.h"
 #include "Scanner.h"
 #include "Token.h"
 #include "Expr.h"
@@ -23,6 +25,21 @@
                    | "(" expression ")" ;
     
 */
+
+const char* expr_type_names[] = {
+    "EXPR_ASSIGN",
+    "EXPR_BINARY",
+    "EXPR_CALL",
+    "EXPR_GET",
+    "EXPR_GROUPING",
+    "EXPR_LITERAL",
+    "EXPR_LOGICAL",
+    "EXPR_SET",
+    "EXPR_SUPER",
+    "EXPR_THIS",
+    "EXPR_UNARY",
+    "EXPR_VARIABLE"
+};
 
 typedef struct parser parser_t;
 struct parser {
@@ -64,16 +81,16 @@ int main(void) {
         printf("Failed to parse expression\n");
         return 1;
     }
-    printf("Parsed expression of type %d\n", expr->type);
+    printf("Parsed expression of type %s\n", expr_type_names[expr->type]);
     
     string_builder_t sb = create_string_builder();
     ast_printer_t printer = {0};
     ast_printer_init(&printer, &sb);
 
-    char* result = ast_printer_print(&printer, expr);
+    char* result = ast_printer_print_expr(&printer, expr);
     printf("AST Printer Result: %s\n", result);
     printf("String Builder Content: %s\n", sb.buffer);
-    free(result);
+    memory_free(&result);
 
     return 0;
 }
@@ -126,7 +143,7 @@ expr_t* parse_equality(parser_t* parser) {
         token_t* operator = token_previous_ptr(parser);
         expr_t* right = parse_comparison(parser);
         expr_binary_t binary_expr = { .left = expr, .operator = operator, .right = right };
-        expr_t* new_expr = (expr_t*)malloc(sizeof(expr_t));
+        expr_t* new_expr = (expr_t*)memory_allocate(sizeof(expr_t));
         new_expr->type = EXPR_BINARY;
         new_expr->as.binary_expr = binary_expr;
         expr = new_expr;
@@ -149,21 +166,51 @@ expr_t* parse_unary(parser_t* parser) {
     // unimplemented
     return parse_primary(parser);
 }
+
+// helpers move somewhere else
+static object_t* object_new_string(const char* value) {
+    object_t* obj = (object_t*)memory_allocate(sizeof(object_t));
+    if (!obj) return NULL;
+    obj->type = OBJECT_STRING;
+    obj->as.string.value = (char*)value; // assume value is heap allocated
+    if (!obj->as.string.value) {
+        memory_free(obj);
+        return NULL;
+    }
+    return obj;
+}
+static object_t* object_new_number(double value) {
+    object_t* obj = (object_t*)memory_allocate(sizeof(object_t));
+    if (!obj) return NULL;
+    obj->type = OBJECT_NUMBER;
+    obj->as.number.value = value;
+    return obj;
+}
+
 expr_t* parse_primary(parser_t* parser) {
     // unimplemented
     printf("parse_primary called\n");
     if (token_match(parser, 2, NUMBER, STRING)) {
         token_t* value_token = token_previous_ptr(parser);
-        expr_literal_t literal_expr = { .value = &(object_t){
-            .type = (value_token->type == NUMBER) ? OBJECT_NUMBER : OBJECT_STRING,
-            .as = {
-                .number = { .value = (value_token->type == NUMBER) ? atof(value_token->lexeme) : 0.0 },
-                .string = { .value = (value_token->type == STRING) ? strdup(value_token->lexeme) : NULL }
-            }
-        }};
-        expr_t* new_expr = (expr_t*)malloc(sizeof(expr_t));
+        object_t* obj = NULL;
+        if (value_token->type == STRING) {
+            obj = object_new_string(value_token->lexeme);
+        }
+        else if (value_token->type == NUMBER) {
+            obj = object_new_number(atof(value_token->lexeme));
+        }
+        if (!obj) {
+            printf("Failed to create object for literal\n");
+            return NULL;
+        }
+        expr_t* new_expr = (expr_t*)memory_allocate(sizeof(expr_t));
+        if (!new_expr) {
+            memory_free(&obj);
+            printf("Failed to allocate memory for literal expression\n");
+            return NULL;
+        }
         new_expr->type = EXPR_LITERAL;
-        new_expr->as.literal_expr = literal_expr;
+        new_expr->as.literal_expr.value = obj;
         return new_expr;
     }
     return NULL;
