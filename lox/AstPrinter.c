@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include "../extra/Arrays.h"
+#include "../extra/Memory.h"
 #include "Expr.h"
 #include "Stmt.h"
 #include "Token.h"
@@ -45,7 +46,7 @@ static char* str_printf(const char* fmt, ...) {
         va_end(ap2);
         return NULL;
     }
-    char* buf = (char*)malloc((size_t)n + 1);
+    char* buf = (char*)memory_allocate((size_t)n + 1);
     if (!buf) {
         va_end(ap2);
         return NULL;
@@ -65,7 +66,7 @@ static char* obj_to_string(const object_t* obj_p) {
 }
 static char* paren1(const char* name, char* e) {
     char* result = str_printf("(%s %s)", name, e ? e : "(null)");
-    free(e);
+    memory_free(&e);
     return result;
 }
 // ---------- Fallbacks (so missing visitors don't segfault) ----------

@@ -16,5 +16,7 @@
         "xutility": "c",
         "arrays.h": "c",
         "stdbool.h": "c"
-    }
+    },
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "python-envs.pythonProjects": []
 }

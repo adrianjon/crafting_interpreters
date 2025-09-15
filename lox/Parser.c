@@ -174,7 +174,7 @@ static object_t* object_new_string(const char* value) {
     obj->type = OBJECT_STRING;
     obj->as.string.value = (char*)value; // assume value is heap allocated
     if (!obj->as.string.value) {
-        memory_free(obj);
+        memory_free(&obj);
         return NULL;
     }
     return obj;
