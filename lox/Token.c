@@ -1,0 +1,48 @@
+//
+// Created by adrian on 2025-09-15.
+//
+
+#include "Token.h"
+
+const char* token_type_names[] = {
+    "LEFT_PAREN",
+    "RIGHT_PAREN",
+    "COMMA",
+    "DOT",
+    "SEMICOLON",
+    "COLON",
+    "SLASH",
+    "LEFT_BRACE",
+    "RIGHT_BRACE",
+    "PLUS",
+    "MINUS",
+    "STAR",
+    "BANG",
+    "BANG_EQUAL",
+    "EQUAL",
+    "EQUAL_EQUAL",
+    "GREATER",
+    "GREATER_EQUAL",
+    "LESS",
+    "LESS_EQUAL",
+    "STRING",
+    "NUMBER",
+    "IDENTIFIER",
+    "IF",
+    "ELSE",
+    "WHILE",
+    "FOR",
+    "RETURN",
+    "PRINT",
+    "AND",
+    "OR",
+    "TRUE",
+    "FALSE",
+    "NIL",
+    "VAR",
+    "FUN",
+    "CLASS",
+    "SUPER",
+    "THIS",
+    "EOF",
+};

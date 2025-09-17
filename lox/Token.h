@@ -1,0 +1,60 @@
+//
+// Created by adrian on 2025-09-15.
+//
+
+#ifndef LOX_TOKEN_H
+#define LOX_TOKEN_H
+
+typedef enum
+{
+    LEFT_PAREN,
+    RIGHT_PAREN,
+    COMMA,
+    DOT,
+    SEMICOLON,
+    COLON,
+    SLASH,
+    LEFT_BRACE,
+    RIGHT_BRACE,
+    PLUS,
+    MINUS,
+    STAR,
+    BANG,
+    BANG_EQUAL,
+    EQUAL,
+    EQUAL_EQUAL,
+    GREATER,
+    GREATER_EQUAL,
+    LESS,
+    LESS_EQUAL,
+    STRING,
+    NUMBER,
+    IDENTIFIER,
+    IF,
+    ELSE,
+    WHILE,
+    FOR,
+    RETURN,
+    PRINT,
+    AND,
+    OR,
+    KW_TRUE,
+    KW_FALSE,
+    NIL,
+    VAR,
+    FUN,
+    CLASS,
+    SUPER,
+    KW_THIS,
+    EOF_,
+} token_type_t;
+
+extern const char* token_type_names[];
+
+typedef struct {
+    token_type_t type;
+    char lexeme[256]; // max lexeme length
+    int line;
+} token_t;
+
+#endif //LOX_TOKEN_H
