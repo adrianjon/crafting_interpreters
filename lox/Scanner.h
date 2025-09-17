@@ -39,6 +39,6 @@ bool is_alphanumeric(char c);
 void identifier();
 token_type_t get_keyword_type(const char* identifier);
 
-void print_tokens(dynamic_array_t* tokens);
+void print_tokens(const dynamic_array_t* tokens);
 
 #endif //LOX_SCANNER_H

@@ -1,3 +1,1 @@
-// My first Lox program
-"Hello, World!"
-//print "Hello, World!"
+1 + 2 * (3 - 4) == 5

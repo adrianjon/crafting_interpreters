@@ -77,7 +77,7 @@ typedef struct {
 } expr_grouping_t;
 
 typedef struct {
-	object_t* value;
+	token_t* kind;
 	
 } expr_literal_t;
 

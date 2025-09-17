@@ -95,8 +95,8 @@ static void* ap_unimpl_stmt(const stmt_t* stmt, const stmt_visitor_t* v, void* c
 static void* visit_literal_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
     (void)visitor;
     const ast_printer_t* printer_p = (ast_printer_t*)context;
-    print_object(printer_p->sb_p, expr->as.literal_expr.value);
-    return obj_to_string(expr->as.literal_expr.value);
+    print_object(printer_p->sb_p, (object_t*)expr->as.literal_expr.kind);
+    return obj_to_string((object_t*)expr->as.literal_expr.kind);
 }
 static void* visit_print_stmt(const stmt_t* stmt, const stmt_visitor_t* visitor, void* context) {
     (void)visitor;

@@ -4,7 +4,7 @@
 
 #include "Token.h"
 
-const char* token_type_names[] = {
+const char* g_token_type_names[] = {
     "LEFT_PAREN",
     "RIGHT_PAREN",
     "COMMA",

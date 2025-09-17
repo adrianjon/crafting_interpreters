@@ -46,14 +46,15 @@ typedef enum
     CLASS,
     SUPER,
     KW_THIS,
-    EOF_,
+    END_OF_FILE,
 } token_type_t;
 
-extern const char* token_type_names[];
+extern const char* g_token_type_names[];
 
+#define TOKEN_LEXEME_MAX 256
 typedef struct {
     token_type_t type;
-    char lexeme[256]; // max lexeme length
+    char lexeme[TOKEN_LEXEME_MAX]; // max lexeme length
     int line;
 } token_t;
 

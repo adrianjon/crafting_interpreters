@@ -31,6 +31,7 @@ void* array_get(const dynamic_array_t* array, const size_t index) {
     return NULL;
 }
 void array_free(dynamic_array_t* array) {
+    memory_free(&array->data);
     array->data = NULL;
     array->size = 0;
     array->capacity = 0;

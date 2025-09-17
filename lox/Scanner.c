@@ -14,9 +14,9 @@ static scanner_t g_scanner = {0};
 
 // Public functions
 
-void scanner_read_file(const char* filename) {
+void scanner_read_file(const char * filename) {
     g_scanner.p_target_file = read_file(filename);
-    if(!g_scanner.p_target_file) {
+    if (!g_scanner.p_target_file) {
         print_error("Failed to read file");
         return;
     }
@@ -32,16 +32,20 @@ typedef struct {
     int line;
 } token_t;
  */
-void add_token(const token_type_t type, const char* lexeme,const int line, dynamic_array_t* tokens) {
-    token_t token = { .type = type, .line = line };
+void add_token(const token_type_t type, const char * lexeme, const int line, dynamic_array_t * tokens) {
+    token_t token = {.type = type, .line = line};
 
     if (lexeme) {
+
+        // TODO: implement some kind of strlen function and replace with this manual method
         size_t lex_len = 0;
-        while(lexeme[lex_len] != '\0' && lex_len < 255) {
+        while (lexeme[lex_len] != '\0' && lex_len < TOKEN_LEXEME_MAX - 1) {
             lex_len++;
         }
         memory_copy(token.lexeme, lexeme, lex_len);
         token.lexeme[lex_len] = '\0';
+    } else {
+        token.lexeme[0] = '\0';
     }
     array_push(tokens, &token, sizeof(token_t));
 }
@@ -49,40 +53,47 @@ void add_token(const token_type_t type, const char* lexeme,const int line, dynam
 bool scanner_is_at_end(void) {
     return *g_scanner.p_current == '\0' || g_scanner.p_current >= g_scanner.p_start + g_scanner.p_target_file->size;
 }
+
 int scanner_get_line(void) {
     return g_scanner.line;
 }
+
 char scanner_advance(void) {
     if (*g_scanner.p_current == '\n') g_scanner.line++;
     return *g_scanner.p_current++;
 }
-const char* scanner_previous(void) {
+
+const char * scanner_previous(void) {
     if (g_scanner.p_current > g_scanner.p_start) {
         return g_scanner.p_current - 1;
     }
     return NULL;
 }
+
 char scanner_peek(void) {
     if (scanner_is_at_end()) return '\0';
     return *g_scanner.p_current;
 }
+
 char scanner_peek_next(void) {
     if (scanner_is_at_end()) return '\0';
     if (*(g_scanner.p_current + 1) == '\0') return '\0';
     return *(g_scanner.p_current + 1);
 }
-const char* scanner_peek_ptr(void) {
+
+const char * scanner_peek_ptr(void) {
     return g_scanner.p_current;
 }
 
 bool match(const char expected, const char actual) {
-    (void)actual;
+    (void) actual;
     //printf("match: expected '%c', actual '%c'\n", expected, actual);
     if (scanner_is_at_end()) return false;
     if (*g_scanner.p_current != expected) return false;
     g_scanner.p_current++;
     return true;
 }
+
 void string() {
     while (scanner_peek() != '"' && !scanner_is_at_end()) {
         scanner_advance();
@@ -94,12 +105,12 @@ void string() {
     }
     // Consume the closing quote
     scanner_advance();
-    // Trim the surrounding quotes
-    // TODO: Implement trimming logic
 }
+
 bool is_digit(const char c) {
     return c >= '0' && c <= '9';
 }
+
 void number() {
     while (is_digit(scanner_peek())) scanner_advance();
 
@@ -108,20 +119,22 @@ void number() {
         scanner_advance();
         while (is_digit(scanner_peek())) scanner_advance();
     }
-    // Convert the number string to an integer
-    // TODO: Implement conversion logic
 }
+
 bool is_alpha(const char c) {
     return (c >= 'a' && c <= 'z') ||
            (c >= 'A' && c <= 'Z') ||
-            c == '_';
+           c == '_';
 }
+
 bool is_alphanumeric(const char c) {
     return is_alpha(c) || is_digit(c);
 }
+
 void identifier() {
     while (is_alphanumeric(scanner_peek())) scanner_advance();
 }
+
 /*
     IF,
     ELSE,
@@ -140,7 +153,7 @@ void identifier() {
     SUPER,
     KW_THIS,
 */
-token_type_t get_keyword_type(const char* identifier) {
+token_type_t get_keyword_type(const char * identifier) {
     if (memory_compare(identifier, "if", 2)) return IF;
     if (memory_compare(identifier, "else", 4)) return ELSE;
     if (memory_compare(identifier, "while", 5)) return WHILE;
@@ -160,11 +173,11 @@ token_type_t get_keyword_type(const char* identifier) {
     return IDENTIFIER;
 }
 
-void print_tokens(dynamic_array_t* tokens) {
-    for(size_t i = 0; i < tokens->size / sizeof(token_t); i++) {
-        const token_t* token = (token_t*)array_get(tokens, i * sizeof(token_t));
+void print_tokens(const dynamic_array_t * tokens) {
+    for (size_t i = 0; i < tokens->size / sizeof(token_t); i++) {
+        const token_t * token = (token_t *) array_get(tokens, i * sizeof(token_t));
         print("Token: ");
-        print(token_type_names[token->type]);
+        print(g_token_type_names[token->type]);
         print(" at line ");
         print_int(token->line);
         print(" with lexeme '");
@@ -174,34 +187,40 @@ void print_tokens(dynamic_array_t* tokens) {
     }
 }
 
-int scanner_main(dynamic_array_t* tokens) {
-
-
+int scanner_main(dynamic_array_t * tokens) {
     scanner_read_file("lox.txt");
-
-    //dynamic_array_t tokens = create_array(1024 * 1); // initial capacity for 1KB
-
     *tokens = create_array(1024 * 1); // initial capacity for 1KB
 
-    while(!scanner_is_at_end()) {
+    while (!scanner_is_at_end()) {
         const char c = scanner_advance();
         bool is_equal;
-        const char* start;
+        const char * start;
         size_t length;
         char buffer[256] = {0};
         //print_char(c);
         switch (c) {
-            case '(': add_token(LEFT_PAREN, "(", scanner_get_line(), tokens); break;
-            case ')': add_token(RIGHT_PAREN, ")", scanner_get_line(), tokens); break;
-            case '{': add_token(LEFT_BRACE, "{", scanner_get_line(), tokens); break;
-            case '}': add_token(RIGHT_BRACE, "}", scanner_get_line(), tokens); break;
-            case ',': add_token(COMMA, ",", scanner_get_line(), tokens); break;
-            case '.': add_token(DOT, ".", scanner_get_line(), tokens); break;
-            case '+': add_token(PLUS, "+", scanner_get_line(), tokens); break;
-            case '-': add_token(MINUS, "-", scanner_get_line(), tokens); break;
-            case ';': add_token(SEMICOLON, ";", scanner_get_line(), tokens); break;
-            case ':': add_token(COLON, ":", scanner_get_line(), tokens); break;
-            case '*': add_token(STAR, "*", scanner_get_line(), tokens); break;
+            case '(': add_token(LEFT_PAREN, "(", scanner_get_line(), tokens);
+                break;
+            case ')': add_token(RIGHT_PAREN, ")", scanner_get_line(), tokens);
+                break;
+            case '{': add_token(LEFT_BRACE, "{", scanner_get_line(), tokens);
+                break;
+            case '}': add_token(RIGHT_BRACE, "}", scanner_get_line(), tokens);
+                break;
+            case ',': add_token(COMMA, ",", scanner_get_line(), tokens);
+                break;
+            case '.': add_token(DOT, ".", scanner_get_line(), tokens);
+                break;
+            case '+': add_token(PLUS, "+", scanner_get_line(), tokens);
+                break;
+            case '-': add_token(MINUS, "-", scanner_get_line(), tokens);
+                break;
+            case ';': add_token(SEMICOLON, ";", scanner_get_line(), tokens);
+                break;
+            case ':': add_token(COLON, ":", scanner_get_line(), tokens);
+                break;
+            case '*': add_token(STAR, "*", scanner_get_line(), tokens);
+                break;
             case '!':
                 is_equal = match('=', scanner_peek());
                 add_token(is_equal ? BANG_EQUAL : BANG, is_equal ? "!=" : "!", scanner_get_line(), tokens);
@@ -265,7 +284,8 @@ int scanner_main(dynamic_array_t* tokens) {
                 memory_copy(buffer, start + 1, length - 2); // exclude quotes bug here
                 buffer[length - 2] = '\0';
 
-                add_token(STRING, buffer, scanner_get_line(), tokens); break;
+                add_token(STRING, buffer, scanner_get_line(), tokens);
+                break;
             default:
                 if (is_digit(c)) {
                     start = scanner_previous();
@@ -274,9 +294,6 @@ int scanner_main(dynamic_array_t* tokens) {
 
                     memory_copy(buffer, start, length);
                     buffer[length] = '\0';
-                    // printf("number length: %zu\n", length);
-                    // printf("start char: '%c'\n", *start);
-                    // printf("Number: %s\n", buffer);
                     add_token(NUMBER, buffer, scanner_get_line(), tokens);
                 } else if (is_alpha(c)) {
                     start = scanner_previous();
@@ -285,7 +302,6 @@ int scanner_main(dynamic_array_t* tokens) {
                     memory_copy(buffer, start, length);
                     buffer[length] = '\0';
                     const token_type_t type = get_keyword_type(buffer);
-                    //printf("buffer: '%s' length: %zu\n", buffer, length);
                     add_token(type, buffer, scanner_get_line(), tokens);
                 } else {
                     print_error("Unexpected character");
@@ -294,16 +310,8 @@ int scanner_main(dynamic_array_t* tokens) {
         }
     }
 
-    add_token(EOF_, NULL, scanner_get_line(), tokens);
+    add_token(END_OF_FILE, NULL, scanner_get_line(), tokens);
     printf("Scanning complete. Total tokens: %zu\n", tokens->size / sizeof(token_t));
-    //print_tokens(&tokens);
 
-
-    // debug_memory_pool();
-    // GenerateAst();
-    // memory_free(&g_scanner.target_file->buffer);
-    // memory_free(&tokens.data);
-    // memory_free(&g_scanner.target_file);
-    // debug_memory_pool();
     return 0;
 }

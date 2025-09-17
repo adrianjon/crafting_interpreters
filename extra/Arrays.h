@@ -8,9 +8,9 @@
 #define NULL ((void *)0)
 typedef unsigned long long size_t;
 
-typedef struct {
-    void* data;
-} Object;
+// typedef struct {
+//     void* data;
+// } Object;
 
 typedef struct {
     void* data;

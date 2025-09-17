@@ -62,10 +62,12 @@ void print_error(const char* str) {
 
 
 file_t* read_file(const char* filename) {
+    // ReSharper disable once CppLocalVariableMayBeConst
     HANDLE file = CreateFileA(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
         return NULL;
     }
+    // ReSharper disable once CppLocalVariableMayBeConst
     DWORD file_size = GetFileSize(file, NULL);
     if (file_size == INVALID_FILE_SIZE) {
         CloseHandle(file);
@@ -89,6 +91,7 @@ file_t* read_file(const char* filename) {
     return f;
 }
 file_t* write_file(const char* filename, const char* data, size_t size) {
+    // ReSharper disable once CppLocalVariableMayBeConst
     HANDLE file = CreateFileA(filename, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
         print_error("Failed to create file");
