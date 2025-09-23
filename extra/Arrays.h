@@ -15,7 +15,7 @@ typedef unsigned long long size_t;
 typedef struct {
     void* data;
     size_t size;
-    size_t capacity;
+    size_t capacity; // in
 } dynamic_array_t;
 
 dynamic_array_t create_array(size_t initial_capacity);

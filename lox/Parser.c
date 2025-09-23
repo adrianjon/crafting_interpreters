@@ -22,7 +22,7 @@
 
 */
 struct parser {
-    const dynamic_array_t * tokens;
+    dynamic_array_t * tokens;
     size_t current;
     token_t * previous;
     token_t * current_token;
@@ -72,9 +72,11 @@ const char* g_stmt_type_names[] = {
 };
 bool g_error_flag = false;
 parser_t * parser_init(const dynamic_array_t * tokens) {
-    // does not own tokens array so should not free
+
+    // owns copy of token array, need to free
     parser_t * parser = memory_allocate(sizeof(parser_t));
-    parser->tokens = tokens;
+    parser->tokens = memory_allocate(tokens->capacity);
+    memory_copy((void*)parser->tokens, tokens, tokens->capacity);
     parser->current = 0;
     parser->current_token = NULL;
     parser->had_error = false;
@@ -88,8 +90,11 @@ expr_t * parser_parse_expression(parser_t * p_parser) {
 void parser_free(parser_t * p_parser) {
     if (!p_parser) return;
     if (p_parser->tokens) {
-        // does not own tokens so should not free
-        // TODO change owneship by copying tokens array
+        array_free(p_parser->tokens);
+        p_parser->tokens->data = NULL;
+        p_parser->tokens->capacity = 0;
+        p_parser->tokens->size = 0;
+        memory_free((void**)p_parser->tokens);
     }
     memory_free((void**)&p_parser);
     p_parser = NULL;

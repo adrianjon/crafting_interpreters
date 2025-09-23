@@ -12,14 +12,21 @@
 #include "extra/Memory.h"
 #include "lox/ast_interpreter.h"
 
+
+// TODO fix free functions. Exception occurs during scanner_free()
 int main(void) {
     scanner_t * p_scanner = scanner_init("lox.txt");
     scanner_scan(p_scanner);
     scanner_print_tokens(p_scanner);
-    parser_t * parser = parser_init(scanner_get_tokens(p_scanner));
+    parser_t * p_parser = parser_init(scanner_get_tokens(p_scanner));
 
 
-    expr_t* expr = parser_parse_expression(parser);
+    expr_t* expr = parser_parse_expression(p_parser);
+    // expression tree stores lexemes, should be free to free scanner and parser here
+
+    // parser_free(p_parser);
+    // scanner_free(p_scanner);
+
     if (!expr) {
         printf("Failed to parse expression\n");
         return 1;
@@ -56,8 +63,8 @@ int main(void) {
 
     ast_evaluator_free(evaluator_p);
     free_expression(expr);
-    parser_free(parser);
-    scanner_free(p_scanner);
+    // parser_free(p_parser);
+    // scanner_free(p_scanner);
 
     return 0;
 }
