@@ -15,7 +15,6 @@ typedef enum {
     VAL_BOOL,
     VAL_NIL,
 } value_type_t;
-
 typedef struct {
     value_type_t type;
     union {
@@ -24,23 +23,13 @@ typedef struct {
         bool boolean;
     } as;
 } value_t;
+typedef struct ast_evaluator ast_evaluator_t;
 
-typedef struct ast_evaluator {
-    value_t last_result;
-
-    bool had_runtime_error;
-    char error_message[256];
-
-    expr_visitor_t expr_visitor;
-    stmt_visitor_t stmt_visitor;
-} ast_evaluator_t;
-
-// Initialize and wire visitor function pointers.
-void ast_evaluator_init(ast_evaluator_t * evaluator_p);
-
-// Entry points
-value_t * ast_evaluator_eval_expr(ast_evaluator_t * evaluator_p, const expr_t * expr_p);
-
-value_t * ast_evaluator_eval_stmt(ast_evaluator_t * evaluator_p, const stmt_t * stmt_p);
+// new API
+ast_evaluator_t * ast_evaluator_init(void);
+value_t * ast_evaluator_evaluate_expression(ast_evaluator_t * p_evaluator, const expr_t * expr_p);
+void ast_evaluator_free(ast_evaluator_t * p_evaluator);
+value_t * ast_evaluator_eval_expr(ast_evaluator_t * p_evaluator, const expr_t * expr_p);
+value_t * ast_evaluator_eval_stmt(ast_evaluator_t * p_evaluator, const stmt_t * stmt_p);
 
 #endif //LOX_AST_INTERPRETER_H

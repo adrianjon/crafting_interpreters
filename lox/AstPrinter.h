@@ -9,15 +9,12 @@
 #include "Expr.h"
 #include "Stmt.h"
 
-typedef struct ast_printer {
-    string_builder_t* sb_p;
-    expr_visitor_t expr_visitor;
-    stmt_visitor_t stmt_visitor;
-} ast_printer_t;
+typedef struct ast_printer ast_printer_t;
 
-// Initialize and wire visitor function pointers.
-void ast_printer_init(ast_printer_t* printer_p, string_builder_t* sb_p);
-
+// new API
+ast_printer_t * ast_printer_init(string_builder_t * sb_p);
+char * ast_printer_print_expression(ast_printer_t * printer_p, const expr_t * expr_p);
+void ast_printer_free(ast_printer_t * printer_p);
 // Entry points
 char* ast_printer_print_expr(ast_printer_t* printer_p, const expr_t* expr_p);
 char* ast_printer_print_stmt(ast_printer_t* printer_p, const stmt_t* stmt_p);

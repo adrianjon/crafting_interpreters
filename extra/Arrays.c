@@ -51,6 +51,10 @@ string_builder_t create_string_builder(void) {
 }
 
 void append_string(string_builder_t* sb, const char* str) {
+    if (!sb) {
+        print("Failed to allocate memory for string builder\n");
+        return;
+    }
     size_t len = 0;
     while (str[len] != '\0') {
         len++;

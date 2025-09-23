@@ -9,15 +9,17 @@
 // #include "lox/Object.h"
 #include "lox/Expr.h"
 // #include "lox/Stmt.h"
+#include "extra/Memory.h"
 #include "lox/ast_interpreter.h"
 
 int main(void) {
-    dynamic_array_t tokens;
-    parser_t parser = {.tokens = &tokens, .current = 0};
-    scanner_main(&tokens);
-    print_tokens(&tokens);
+    scanner_t * p_scanner = scanner_init("lox.txt");
+    scanner_scan(p_scanner);
+    scanner_print_tokens(p_scanner);
+    parser_t * parser = parser_init(scanner_get_tokens(p_scanner));
 
-    expr_t* expr = parse_expression(&parser);
+
+    expr_t* expr = parser_parse_expression(parser);
     if (!expr) {
         printf("Failed to parse expression\n");
         return 1;
@@ -28,28 +30,22 @@ int main(void) {
     }
     printf("Parsed expression of type %s\n", g_expr_type_names[expr->type]);
 
-    string_builder_t sb = create_string_builder();
-    ast_printer_t printer = {0};
-    ast_printer_init(&printer, &sb);
-
-    char* result = ast_printer_print_expr(&printer, expr);
-    // if (!result)
-    //     printf("result string is null\n");
-    // printf("AST Printer Result: %s\n", result);
-    printf("String Builder Content: %s\n", sb.buffer);
-
-    if (result)
+    ast_printer_t * printer = ast_printer_init(NULL);
+    char* result = ast_printer_print_expr(printer, expr);
+    if (result) {
+        printf("AST Printer Result: %s\n", result);
         memory_free((void**)&result);
+    }
 
-
-    ast_evaluator_t evaluator = {0};
-    ast_evaluator_init(&evaluator);
-
-    value_t* val = ast_evaluator_eval_expr(&evaluator, expr);
+    ast_evaluator_t * evaluator_p = ast_evaluator_init();
+    value_t* val = ast_evaluator_eval_expr(evaluator_p, expr);
     if (val) {
         switch (val->type) {
             case VAL_NUMBER:
-                printf("RESULT: %f", val->as.number);
+                printf("RESULT: %f\n", val->as.number);
+                break;
+            case VAL_BOOL:
+                printf("RESULT: %s\n", val->as.boolean == true ? "true" : "false");
                 break;
             default:
                 printf("Error");
@@ -57,5 +53,11 @@ int main(void) {
         }
         memory_free((void**)&val);
     }
+
+    ast_evaluator_free(evaluator_p);
+    free_expression(expr);
+    parser_free(parser);
+    scanner_free(p_scanner);
+
     return 0;
 }

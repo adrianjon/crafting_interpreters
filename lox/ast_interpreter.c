@@ -1,7 +1,6 @@
 //
 // Created by adrian on 2025-09-19.
 //
-
 #include "ast_interpreter.h"
 
 #include <stdio.h>
@@ -11,18 +10,86 @@
 #include "Parser.h"
 #include "Token.h"
 #include "../extra/Memory.h"
+struct ast_evaluator {
+    value_t last_result;
+
+    bool had_runtime_error;
+    char error_message[256];
+
+    expr_visitor_t expr_visitor;
+    stmt_visitor_t stmt_visitor;
+};
+// Forward declarations
+static void* visit_literal_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context);
+static void* visit_unary_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context);
+static void* visit_binary_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context);
+static void* visit_grouping_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context);
+static void * eval_unimpl_expr(const expr_t * expr, const expr_visitor_t * v, void * ctx);
+static void * eval_unimpl_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx);
+// Public API
+ast_evaluator_t * ast_evaluator_init(void) {
+    ast_evaluator_t * p_evaluator = memory_allocate(sizeof(ast_evaluator_t));
+    if (p_evaluator == NULL) {
+        fprintf(stderr, "Error: ast_evaluator_init recieved NULL pointer\n");
+        exit(EXIT_FAILURE);
+    }
+    // Initialize all visitor function pointers to unimplemented fallbacks
+    p_evaluator->expr_visitor.visit_assign = eval_unimpl_expr;
+    p_evaluator->expr_visitor.visit_binary = eval_unimpl_expr;
+    p_evaluator->expr_visitor.visit_call = eval_unimpl_expr;
+    p_evaluator->expr_visitor.visit_get = eval_unimpl_expr;
+    p_evaluator->expr_visitor.visit_grouping = eval_unimpl_expr;
+    p_evaluator->expr_visitor.visit_literal = eval_unimpl_expr;
+    p_evaluator->expr_visitor.visit_logical = eval_unimpl_expr;
+    p_evaluator->expr_visitor.visit_set = eval_unimpl_expr;
+    p_evaluator->expr_visitor.visit_super = eval_unimpl_expr;
+    p_evaluator->expr_visitor.visit_this = eval_unimpl_expr;
+    p_evaluator->expr_visitor.visit_unary = eval_unimpl_expr;
+    p_evaluator->expr_visitor.visit_variable = eval_unimpl_expr;
+
+    p_evaluator->stmt_visitor.visit_block = eval_unimpl_stmt;
+    p_evaluator->stmt_visitor.visit_function = eval_unimpl_stmt;
+    p_evaluator->stmt_visitor.visit_class = eval_unimpl_stmt;
+    p_evaluator->stmt_visitor.visit_expression = eval_unimpl_stmt;
+    p_evaluator->stmt_visitor.visit_if = eval_unimpl_stmt;
+    p_evaluator->stmt_visitor.visit_print = eval_unimpl_stmt;
+    p_evaluator->stmt_visitor.visit_return = eval_unimpl_stmt;
+    p_evaluator->stmt_visitor.visit_var = eval_unimpl_stmt;
+    p_evaluator->stmt_visitor.visit_while = eval_unimpl_stmt;
 
 
-// ----- private helpers ---------
+    p_evaluator->expr_visitor.visit_binary = visit_binary_expr;
+    p_evaluator->expr_visitor.visit_literal = visit_literal_expr;
+    p_evaluator->expr_visitor.visit_unary = visit_unary_expr;
+    p_evaluator->expr_visitor.visit_grouping = visit_grouping_expr;
+
+    return p_evaluator;
+}
+value_t * ast_evaluator_evaluate_expression(ast_evaluator_t * p_evaluator, const expr_t * expr_p) {
+    // TODO implement these
+    return NULL;
+}
+void ast_evaluator_free(ast_evaluator_t * p_evaluator) {
+    if  (!p_evaluator) return;
+    memory_free((void**)&p_evaluator);
+    p_evaluator = NULL;
+}
+value_t * ast_evaluator_eval_expr(ast_evaluator_t * p_evaluator, const expr_t * expr_p) {
+    return expr_accept(expr_p, &p_evaluator->expr_visitor, p_evaluator);
+}
+value_t * ast_evaluator_eval_stmt(ast_evaluator_t * p_evaluator, const stmt_t * stmt_p) {
+    return stmt_accept(stmt_p, &p_evaluator->stmt_visitor, p_evaluator);
+}
+// Private functions
 static void value_free(value_t * val) {
     memory_free((void**)&val);
 }
-bool value_is_truthy(const value_t * val) {
+static bool value_is_truthy(const value_t * val) {
     if (val->type == VAL_NIL) return false;
     if (val->type == VAL_BOOL) return val->as.boolean;
     return true;
 }
-bool value_equals(const value_t * a, const value_t * b) {
+static bool value_equals(const value_t * a, const value_t * b) {
     if (a->type != b->type) return false;
     switch (a->type) {
         case VAL_NUMBER: return a->as.number == b->as.number;
@@ -32,7 +99,6 @@ bool value_equals(const value_t * a, const value_t * b) {
         default: return false;
     }
 }
-// -------------------------------
 static void* visit_literal_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
     (void)visitor, (void)context;
     const expr_literal_t* literal_p = &expr->as.literal_expr;
@@ -64,7 +130,6 @@ static void* visit_literal_expr(const expr_t* expr, const expr_visitor_t* visito
     }
     return val;
 }
-
 static void* visit_unary_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
     const expr_unary_t * unary_p = &expr->as.unary_expr;
     value_t * right = expr_accept(unary_p->right, visitor, context);
@@ -93,7 +158,6 @@ static void* visit_unary_expr(const expr_t* expr, const expr_visitor_t* visitor,
     value_free(right);
     return result;
 }
-
 static void* visit_binary_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
     const expr_binary_t * binary_p = &expr->as.binary_expr;
 
@@ -150,65 +214,17 @@ static void* visit_binary_expr(const expr_t* expr, const expr_visitor_t* visitor
     value_free(right);
     return result;
 }
-
 static void* visit_grouping_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
-
+    const expr_grouping_t * grouping_p = &expr->as.grouping_expr;
+    return expr_accept(grouping_p->expression, visitor, context);
 }
-
-// ---------- Fallbacks (so missing visitors don't segfault) ----------
 static void * eval_unimpl_expr(const expr_t * expr, const expr_visitor_t * v, void * ctx) {
-    (void)expr; (void)v;
+    (void)expr; (void)v; (void)ctx;
     printf("Unimplemented expression: %s", g_expr_type_names[expr->type]);
     return NULL;
 }
 static void * eval_unimpl_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx) {
-    (void)stmt; (void)v;
+    (void)stmt; (void)v; (void)ctx;
     printf("Unimplemented statement: %s", g_stmt_type_names[stmt->type]);
     return NULL;
-}
-
-// Initialize and wire visitor function pointers.
-void ast_evaluator_init(ast_evaluator_t * evaluator_p) {
-    if (evaluator_p == NULL) {
-        fprintf(stderr, "Error: ast_evaluator_init recieved NULL pointer\n");
-        exit(EXIT_FAILURE);
-    }
-    // Initialize all visitor function pointers to unimplemented fallbacks
-    evaluator_p->expr_visitor.visit_assign = eval_unimpl_expr;
-    evaluator_p->expr_visitor.visit_binary = eval_unimpl_expr;
-    evaluator_p->expr_visitor.visit_call = eval_unimpl_expr;
-    evaluator_p->expr_visitor.visit_get = eval_unimpl_expr;
-    evaluator_p->expr_visitor.visit_grouping = eval_unimpl_expr;
-    evaluator_p->expr_visitor.visit_literal = eval_unimpl_expr;
-    evaluator_p->expr_visitor.visit_logical = eval_unimpl_expr;
-    evaluator_p->expr_visitor.visit_set = eval_unimpl_expr;
-    evaluator_p->expr_visitor.visit_super = eval_unimpl_expr;
-    evaluator_p->expr_visitor.visit_this = eval_unimpl_expr;
-    evaluator_p->expr_visitor.visit_unary = eval_unimpl_expr;
-    evaluator_p->expr_visitor.visit_variable = eval_unimpl_expr;
-
-    evaluator_p->stmt_visitor.visit_block = eval_unimpl_stmt;
-    evaluator_p->stmt_visitor.visit_function = eval_unimpl_stmt;
-    evaluator_p->stmt_visitor.visit_class = eval_unimpl_stmt;
-    evaluator_p->stmt_visitor.visit_expression = eval_unimpl_stmt;
-    evaluator_p->stmt_visitor.visit_if = eval_unimpl_stmt;
-    evaluator_p->stmt_visitor.visit_print = eval_unimpl_stmt;
-    evaluator_p->stmt_visitor.visit_return = eval_unimpl_stmt;
-    evaluator_p->stmt_visitor.visit_var = eval_unimpl_stmt;
-    evaluator_p->stmt_visitor.visit_while = eval_unimpl_stmt;
-
-
-    evaluator_p->expr_visitor.visit_binary = visit_binary_expr;
-    evaluator_p->expr_visitor.visit_literal = visit_literal_expr;
-    evaluator_p->expr_visitor.visit_unary = visit_unary_expr;
-
-}
-
-// Entry points
-value_t * ast_evaluator_eval_expr(ast_evaluator_t * evaluator_p, const expr_t * expr_p) {
-    return expr_accept(expr_p, &evaluator_p->expr_visitor, evaluator_p);
-}
-
-value_t * ast_evaluator_eval_stmt(ast_evaluator_t * evaluator_p, const stmt_t * stmt_p) {
-    return stmt_accept(stmt_p, &evaluator_p->stmt_visitor, evaluator_p);
 }

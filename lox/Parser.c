@@ -1,22 +1,14 @@
 //
 // Created by adrian on 2025-09-15.
 //
-
 #include "Parser.h"
-
-
-
 #include <stdio.h>
 #include <stdarg.h>
-#include <stdlib.h>
 #include "../extra/Arrays.h"
 #include "../extra/Memory.h"
-//#include "Scanner.h"
 #include "Token.h"
 #include "Expr.h"
 #include "Stmt.h"
-//#include "AstPrinter.h"
-
 /* new grammar
     expression     → equality ;
     equality       → comparison ( ( "!=" | "==" ) comparison )* ;
@@ -29,18 +21,29 @@
                    | "(" expression ")" ;
 
 */
-
-// forward declarations
-token_t token_advance(parser_t* parser);
-token_t token_peek(const parser_t* parser);
-bool token_match(parser_t* parser, int count, ...);
-bool token_check(const parser_t* parser, token_type_t expected);
-bool token_is_at_end(const parser_t* parser);
-token_t token_previous(const parser_t* parser);
-token_t* token_previous_ptr(const parser_t* parser);
-object_t* object_new_string(const char* value);
-object_t* object_new_number(double value);
-
+struct parser {
+    const dynamic_array_t * tokens;
+    size_t current;
+    token_t * previous;
+    token_t * current_token;
+    bool * had_error;
+    bool * panic_mode;
+};
+// Forward declarations
+static token_t token_advance(parser_t* parser);
+static token_t token_peek(const parser_t* parser);
+static bool token_match(parser_t* parser, int count, ...);
+static bool token_check(const parser_t* parser, token_type_t expected);
+static bool token_is_at_end(const parser_t* parser);
+static token_t token_previous(const parser_t* parser);
+static token_t* token_previous_ptr(const parser_t* parser);
+static expr_t* parse_expression(parser_t* parser);
+static expr_t* parse_equality(parser_t* parser);
+static expr_t* parse_comparison(parser_t* parser);
+static expr_t* parse_term(parser_t* parser);
+static expr_t* parse_factor(parser_t* parser);
+static expr_t* parse_unary(parser_t* parser);
+static expr_t* parse_primary(parser_t* parser);
 // Public API
 const char* g_expr_type_names[] = {
     "EXPR_ASSIGN",
@@ -56,7 +59,6 @@ const char* g_expr_type_names[] = {
     "EXPR_UNARY",
     "EXPR_VARIABLE"
 };
-
 const char* g_stmt_type_names[] = {
     "STMT_BLOCK",
     "STMT_FUNCTION",
@@ -69,7 +71,29 @@ const char* g_stmt_type_names[] = {
     "STMT_WHILE"
 };
 bool g_error_flag = false;
-
+parser_t * parser_init(const dynamic_array_t * tokens) {
+    // does not own tokens array so should not free
+    parser_t * parser = memory_allocate(sizeof(parser_t));
+    parser->tokens = tokens;
+    parser->current = 0;
+    parser->current_token = NULL;
+    parser->had_error = false;
+    parser->panic_mode = false;
+    parser->previous = NULL;
+    return parser;
+}
+expr_t * parser_parse_expression(parser_t * p_parser) {
+    return parse_expression(p_parser);
+}
+void parser_free(parser_t * p_parser) {
+    if (!p_parser) return;
+    if (p_parser->tokens) {
+        // does not own tokens so should not free
+        // TODO change owneship by copying tokens array
+    }
+    memory_free((void**)&p_parser);
+    p_parser = NULL;
+}
 // token_t* should point to tokens in the shared parser token buffer. Should NOT be freed here
 void free_expression(expr_t* expr) {
     if (!expr) return;
@@ -120,12 +144,13 @@ void free_expression(expr_t* expr) {
             break;
     }
 }
-//    expression     → equality ;
-expr_t* parse_expression(parser_t* parser) {
+// Private functions
+static expr_t* parse_expression(parser_t* parser) {
+    //    expression     → equality
     return parse_equality(parser);
 }
-//    equality       → comparison ( ( "!=" | "==" ) comparison )* ;
-expr_t* parse_equality(parser_t* parser) {
+static expr_t* parse_equality(parser_t* parser) {
+    //    equality       → comparison ( ( "!=" | "==" ) comparison )* ;
     expr_t* expr = parse_comparison(parser);
     while (token_match(parser, 2, BANG_EQUAL, EQUAL_EQUAL)) {
         token_t* operator = token_previous_ptr(parser);
@@ -138,8 +163,8 @@ expr_t* parse_equality(parser_t* parser) {
     }
     return expr;
 }
-//    comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
-expr_t* parse_comparison(parser_t* parser) {
+static expr_t* parse_comparison(parser_t* parser) {
+    //    comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
     expr_t* expr = parse_term(parser);
     while (token_match(parser, 4, LESS, LESS_EQUAL, GREATER, GREATER_EQUAL)) {
         token_t* operator = token_previous_ptr(parser);
@@ -152,8 +177,8 @@ expr_t* parse_comparison(parser_t* parser) {
     }
     return expr;
 }
-// term           → factor ( ( "-" | "+" ) factor )* ;
-expr_t* parse_term(parser_t* parser) {
+static expr_t* parse_term(parser_t* parser) {
+    // term           → factor ( ( "-" | "+" ) factor )* ;
     expr_t* expr = parse_factor(parser);
     while (token_match(parser, 2, MINUS, PLUS)) {
         token_t* operator = token_previous_ptr(parser);
@@ -166,8 +191,8 @@ expr_t* parse_term(parser_t* parser) {
     }
     return expr;
 }
-// factor         → unary ( ( "/" | "*" ) unary )* ;
-expr_t* parse_factor(parser_t* parser) {
+static expr_t* parse_factor(parser_t* parser) {
+    // factor         → unary ( ( "/" | "*" ) unary )* ;
     expr_t* expr = parse_unary(parser);
     while (token_match(parser, 2, SLASH, STAR)) {
         token_t* operator = token_previous_ptr(parser);
@@ -180,9 +205,9 @@ expr_t* parse_factor(parser_t* parser) {
     }
     return expr;
 }
-// unary          → ( "!" | "-" ) unary
-//                | primary ;
-expr_t* parse_unary(parser_t* parser) {
+static expr_t* parse_unary(parser_t* parser) {
+    // unary          → ( "!" | "-" ) unary
+    //                | primary ;
     if (token_match(parser, 2, BANG, MINUS)) {
         token_t* operator = token_previous_ptr(parser);
         expr_t* right = parse_unary(parser);
@@ -194,9 +219,9 @@ expr_t* parse_unary(parser_t* parser) {
     }
     return parse_primary(parser);
 }
-// primary        → NUMBER | STRING | "true" | "false" | "nil"
-//                | "(" expression ")" ;
-expr_t* parse_primary(parser_t* parser) {
+static expr_t* parse_primary(parser_t* parser) {
+    // primary        → NUMBER | STRING | "true" | "false" | "nil"
+    //                | "(" expression ")" ;
     if (token_match(parser, 5, NUMBER, STRING, KW_TRUE, KW_FALSE, NIL)) {
         token_t* number_token = token_previous_ptr(parser);
         expr_t* expr = memory_allocate(sizeof(expr_t));
@@ -225,8 +250,6 @@ expr_t* parse_primary(parser_t* parser) {
     g_error_flag = true; // sets global error flag
     return NULL;
 }
-
-// Private functions
 static token_t token_advance(parser_t* parser) {
     if (!token_is_at_end(parser)) {
         parser->current++;
@@ -266,22 +289,3 @@ static token_t* token_previous_ptr(const parser_t* parser) {
     if (parser->current == 0) return NULL;
     return array_get(parser->tokens, (parser->current - 1) * sizeof(token_t));
 }
-static object_t* object_new_string(const char* value) {
-    object_t* obj = memory_allocate(sizeof(object_t));
-    if (!obj) return NULL;
-    obj->type = OBJECT_STRING;
-    obj->as.string.value = (char*)value; // assume value is heap allocated
-    if (!obj->as.string.value) {
-        memory_free((void**)&obj);
-        return NULL;
-    }
-    return obj;
-}
-static object_t* object_new_number(const double value) {
-    object_t* obj = memory_allocate(sizeof(object_t));
-    if (!obj) return NULL;
-    obj->type = OBJECT_NUMBER;
-    obj->as.number.value = value;
-    return obj;
-}
-
