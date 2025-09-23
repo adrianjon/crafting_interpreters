@@ -20,7 +20,15 @@
 // Currently mixing both approaches.
 
 // ------------ Small private helper functions ------------
-
+static void print_token(string_builder_t* sb_p, const token_t* token_p) {
+    if (token_p->type == STRING) {
+        append_string(sb_p, "\"");
+        append_string(sb_p, token_p->lexeme);
+        append_string(sb_p, "\"");
+        return;
+    }
+    append_string(sb_p, token_p->lexeme);
+}
 static void print_object(string_builder_t* sb_p, const object_t* obj_p) {
     switch (obj_p->type) {
         case OBJECT_STRING:
@@ -95,8 +103,8 @@ static void* ap_unimpl_stmt(const stmt_t* stmt, const stmt_visitor_t* v, void* c
 static void* visit_literal_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
     (void)visitor;
     const ast_printer_t* printer_p = (ast_printer_t*)context;
-    print_object(printer_p->sb_p, (object_t*)expr->as.literal_expr.kind);
-    return obj_to_string((object_t*)expr->as.literal_expr.kind);
+    print_token(printer_p->sb_p, expr->as.literal_expr.kind);
+    return NULL; // TODO: return string instead
 }
 static void* visit_print_stmt(const stmt_t* stmt, const stmt_visitor_t* visitor, void* context) {
     (void)visitor;
@@ -131,7 +139,14 @@ static void* visit_binary_expr(const expr_t* expr, const expr_visitor_t* visitor
     return NULL; // TODO: return string instead
 }
 
-
+static void* visit_grouping_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
+    (void)visitor;
+    const ast_printer_t* printer_p = (ast_printer_t*)context;
+    append_string(printer_p->sb_p, "(");
+    expr_accept(expr->as.grouping_expr.expression, &printer_p->expr_visitor, context);
+    append_string(printer_p->sb_p, ")");
+    return NULL; // TODO: return string instead
+}
 
 // --------------- Public API implementations ----------------
 
@@ -170,6 +185,7 @@ void ast_printer_init(ast_printer_t* printer_p, string_builder_t* sb_p) {
     printer_p->expr_visitor.visit_binary = visit_binary_expr;
     printer_p->expr_visitor.visit_literal = visit_literal_expr;
     printer_p->expr_visitor.visit_unary = visit_unary_expr;
+    printer_p->expr_visitor.visit_grouping = visit_grouping_expr;
 
     // Wire up the statement visitor function pointers
     printer_p->stmt_visitor.visit_print = visit_print_stmt;

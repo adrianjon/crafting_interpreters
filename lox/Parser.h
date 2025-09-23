@@ -8,14 +8,23 @@
 #include "../extra/Arrays.h"
 
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "Expr.h"
 
-extern const char* expr_type_names[];
 
+extern const char* g_expr_type_names[];
+extern const char* g_stmt_type_names[];
+extern bool g_error_flag;
 typedef struct parser parser_t;
 struct parser {
     dynamic_array_t * tokens;
     size_t current;
+    token_t * previous;
+    token_t * current_token;
+    bool * had_error;
+    bool * panic_mode;
 };
 
 expr_t* parse_expression(parser_t* parser);

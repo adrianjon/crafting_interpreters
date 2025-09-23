@@ -24,7 +24,9 @@ add_executable(lox main.c
         lox/Stmt.c
         lox/Stmt.h
         lox/AstPrinter.c
-        lox/AstPrinter.h)
+        lox/AstPrinter.h
+        lox/ast_interpreter.c
+        lox/ast_interpreter.h)
 
 add_executable(GenerateAst tools/GenerateAst.c
         extra/Arrays.h

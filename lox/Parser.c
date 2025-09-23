@@ -42,7 +42,7 @@ object_t* object_new_string(const char* value);
 object_t* object_new_number(double value);
 
 // Public API
-const char* expr_type_names[] = {
+const char* g_expr_type_names[] = {
     "EXPR_ASSIGN",
     "EXPR_BINARY",
     "EXPR_CALL",
@@ -57,6 +57,18 @@ const char* expr_type_names[] = {
     "EXPR_VARIABLE"
 };
 
+const char* g_stmt_type_names[] = {
+    "STMT_BLOCK",
+    "STMT_FUNCTION",
+    "STMT_CLASS",
+    "STMT_EXPRESSION",
+    "STMT_IF",
+    "STMT_PRINT",
+    "STMT_RETURN",
+    "STMT_VAR",
+    "STMT_WHILE"
+};
+bool g_error_flag = false;
 
 // token_t* should point to tokens in the shared parser token buffer. Should NOT be freed here
 void free_expression(expr_t* expr) {
@@ -196,7 +208,11 @@ expr_t* parse_primary(parser_t* parser) {
         expr_t* expr = parse_expression(parser);
         if (!token_match(parser, 1, RIGHT_PAREN)) {
             // Error: expected ')'
+            token_t * test = (token_t*)parser->tokens->data + parser->current - 1;
+            printf("Error: token: %s\tline:%d\n", test->lexeme, test->line);
             printf("Error: Expected ')' after expression.\n");
+            g_error_flag = true;
+            return NULL;
         }
         expr_t* group = memory_allocate(sizeof(expr_t));
         group->type = EXPR_GROUPING;
@@ -205,6 +221,8 @@ expr_t* parse_primary(parser_t* parser) {
     }
     // If none matched, error
     printf("Error: Expected expression.\n");
+    // TODO: fix some other way
+    g_error_flag = true; // sets global error flag
     return NULL;
 }
 

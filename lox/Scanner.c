@@ -262,7 +262,7 @@ int scanner_main(dynamic_array_t * tokens) {
                         print_error("Unterminated multi-line comment");
                     }
                 } else {
-                    add_token(SLASH, NULL, scanner_get_line(), tokens);
+                    add_token(SLASH, "/", scanner_get_line(), tokens);
                 }
                 break;
             case ' ':
