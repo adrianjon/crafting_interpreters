@@ -24,7 +24,7 @@ int main(void) {
 
 
     // expr_t* expr = parser_parse_expression(p_parser);
-    const stmt_t * stmt = parser_parse_statement(p_parser);
+    stmt_t * stmt = parser_parse_statement(p_parser);
     // expression tree stores lexemes, should be free to free scanner and parser here
 
     parser_free(p_parser);

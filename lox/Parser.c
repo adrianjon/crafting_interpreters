@@ -170,7 +170,42 @@ void free_expression(expr_t* expr) {
     memory_free((void**)&expr);
 }
 void free_statement(stmt_t* stmt) {
-
+    if (!stmt) return;
+    // "STMT_BLOCK",
+    //    "STMT_FUNCTION",
+    //    "STMT_CLASS",
+    //    "STMT_EXPRESSION",
+    //    "STMT_IF",
+    //    "STMT_PRINT",
+    //    "STMT_RETURN",
+    //    "STMT_VAR",
+    //    "STMT_WHILE"
+    switch (stmt->type) {
+        case STMT_BLOCK:
+            for (size_t i = 0; i < *stmt->as.block_stmt.count; i++) {
+                free_statement(stmt->as.block_stmt.statements[i]);
+            }
+            memory_free((void**)&stmt->as.block_stmt.statements);
+            memory_free((void**)&stmt->as.block_stmt.count);
+            break;
+        case STMT_FUNCTION:
+        case STMT_CLASS:
+            // TODO implement this
+            break;
+        case STMT_EXPRESSION:
+            free_expression(stmt->as.expression_stmt.expression);
+            break;
+        case STMT_IF:
+        case STMT_PRINT:
+            free_expression(stmt->as.print_stmt.expression);
+            break;
+        case STMT_RETURN:
+        case STMT_VAR:
+        case STMT_WHILE:
+            // TODO implement this
+            break;
+    }
+    memory_free((void**)&stmt);
 }
 // Private functions
 static expr_t* parse_expression(parser_t* parser) {
