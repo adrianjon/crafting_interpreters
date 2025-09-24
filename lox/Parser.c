@@ -250,7 +250,6 @@ static expr_t* parse_primary(parser_t* parser) {
         const token_t* number_token = token_previous_ptr(parser);
         expr_t* expr = memory_allocate(sizeof(expr_t));
         expr->type = EXPR_LITERAL;
-        // needs to copy token here (TODO free token
         expr->as.literal_expr.kind = memory_allocate(sizeof(token_t));
         if (!memory_copy(expr->as.literal_expr.kind, number_token, sizeof(token_t))) {
             printf("memory copy failed\n");
