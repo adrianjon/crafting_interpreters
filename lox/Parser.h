@@ -19,6 +19,7 @@ typedef struct parser parser_t;
 parser_t * parser_init(const dynamic_array_t * tokens);
 expr_t * parser_parse_expression(parser_t * p_parser);
 stmt_t * parser_parse_statement(parser_t * p_parser);
+token_type_t parser_get_current_token_type(const parser_t * p_parser);
 void parser_free(parser_t * p_parser);
 void free_expression(expr_t* expr);
 void free_statement(stmt_t* stmt);

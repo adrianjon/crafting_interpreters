@@ -20,12 +20,14 @@
     unary          → ( "!" | "-" ) unary
                    | primary ;
     primary        → NUMBER | STRING | "true" | "false" | "nil"
-                   | "(" expression ")" ;
+                   | "(" expression ")" | IDENTIFIER ;
 
-    program         -> statement* EOF ;
+    program         -> declaration* EOF ;
+    declaration     -> varDecl | statement ;
     statement       -> exprStmt | printStmt ;
     exprStmt        -> expression ";" ;
     printStmt       -> "print" expression ";" ;
+    varDecl         -> "var" IDENTIFIER ( "=" expression )? ";" ;
 
 */
 
@@ -54,6 +56,7 @@ static expr_t* parse_factor(parser_t* parser);
 static expr_t* parse_unary(parser_t* parser);
 static expr_t* parse_primary(parser_t* parser);
 static stmt_t * statement(parser_t * p_parser);
+static stmt_t * declaration(parser_t * p_parser);
 // Public API
 const char* g_expr_type_names[] = {
     "EXPR_ASSIGN",
@@ -102,7 +105,11 @@ expr_t * parser_parse_expression(parser_t * p_parser) {
     return parse_expression(p_parser);
 }
 stmt_t * parser_parse_statement(parser_t * p_parser) {
-    return statement(p_parser);
+    return declaration(p_parser);
+}
+token_type_t parser_get_current_token_type(const parser_t * p_parser) {
+    const token_t * p_token = (token_t*)p_parser->tokens->data + p_parser->current;
+    return p_token->type;
 }
 void parser_free(parser_t * p_parser) {
     if (!p_parser) return;
@@ -123,6 +130,7 @@ void free_expression(expr_t* expr) {
     switch (expr->type) {
         case EXPR_ASSIGN:
             free_expression(expr->as.assign_expr.value);
+            memory_free((void**)&expr->as.assign_expr.name);
             break;
         case EXPR_BINARY:
             free_expression(expr->as.binary_expr.left);
@@ -163,7 +171,8 @@ void free_expression(expr_t* expr) {
             free_expression(expr->as.unary_expr.right);
             break;
         case EXPR_VARIABLE:
-            //break;
+            memory_free((void**)&expr->as.variable_expr.name);
+            break;
         default:
             break;
     }
@@ -201,6 +210,9 @@ void free_statement(stmt_t* stmt) {
             break;
         case STMT_RETURN:
         case STMT_VAR:
+            free_expression(stmt->as.var_stmt.initializer);
+            memory_free((void**)&stmt->as.var_stmt.name);
+            break;
         case STMT_WHILE:
             // TODO implement this
             break;
@@ -296,7 +308,7 @@ static expr_t* parse_unary(parser_t* parser) {
 }
 static expr_t* parse_primary(parser_t* parser) {
     // primary        → NUMBER | STRING | "true" | "false" | "nil"
-    //                | "(" expression ")" ;
+    //                | "(" expression ")" | IDENTIFIER ;
     if (token_match(parser, 5, NUMBER, STRING, KW_TRUE, KW_FALSE, NIL)) {
         const token_t* number_token = token_previous_ptr(parser);
         expr_t* expr = memory_allocate(sizeof(expr_t));
@@ -304,6 +316,16 @@ static expr_t* parse_primary(parser_t* parser) {
         expr->as.literal_expr.kind = memory_allocate(sizeof(token_t));
         if (!memory_copy(expr->as.literal_expr.kind, number_token, sizeof(token_t))) {
             printf("memory copy failed\n");
+        }
+        return expr;
+    }
+    if (token_match(parser, 1, IDENTIFIER)) {
+        expr_t* expr = memory_allocate(sizeof(expr_t));
+        expr->type = EXPR_VARIABLE;
+        expr->as.variable_expr.name = memory_allocate(sizeof(token_t));
+        if (!memory_copy(expr->as.variable_expr.name, token_previous_ptr(parser), sizeof(token_t))) {
+            printf("error memory_copy\n");
+            exit(EXIT_FAILURE);
         }
         return expr;
     }
@@ -389,6 +411,30 @@ static stmt_t * expression_statement(parser_t * p_parser) {
     expr_stmt->type = STMT_EXPRESSION;
     expr_stmt->as.expression_stmt.expression = expr;
     return expr_stmt;
+}
+static stmt_t * var_declaration(parser_t * p_parser) {
+    const token_t token = consume(p_parser, IDENTIFIER, "Expect variable name.");
+
+    expr_t * initializer = NULL;
+    if (token_match(p_parser, 1, EQUAL)) {
+        initializer = parse_expression(p_parser);
+    }
+    consume(p_parser, SEMICOLON, "Expected ';' after variable declaration.");
+    stmt_t * var_decl_stmt = memory_allocate(sizeof(stmt_t));
+    var_decl_stmt->type = STMT_VAR;
+    var_decl_stmt->as.var_stmt.initializer = initializer;
+    var_decl_stmt->as.var_stmt.name = memory_allocate(sizeof(token_t));
+    if (!memory_copy(var_decl_stmt->as.var_stmt.name, &token, sizeof(token_t))) {
+        printf("error memory_copy\n");
+        exit(EXIT_FAILURE);
+    }
+    return var_decl_stmt;
+}
+static stmt_t * declaration(parser_t * p_parser) {
+    if (token_match(p_parser, 1, VAR)) {
+        return var_declaration(p_parser);
+    }
+    return statement(p_parser);
 }
 static stmt_t * statement(parser_t * p_parser) {
     if (token_match(p_parser, 1, PRINT)) {
