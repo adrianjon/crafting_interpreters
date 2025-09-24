@@ -25,6 +25,7 @@ static void* visit_unary_expr(const expr_t* expr, const expr_visitor_t* visitor,
 static void* visit_binary_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context);
 static void* visit_grouping_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context);
 static void * eval_unimpl_expr(const expr_t * expr, const expr_visitor_t * v, void * ctx);
+static void * visit_print_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx);
 static void * eval_unimpl_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx);
 // Public API
 ast_evaluator_t * ast_evaluator_init(void) {
@@ -63,6 +64,8 @@ ast_evaluator_t * ast_evaluator_init(void) {
     p_evaluator->expr_visitor.visit_unary = visit_unary_expr;
     p_evaluator->expr_visitor.visit_grouping = visit_grouping_expr;
 
+    p_evaluator->stmt_visitor.visit_print = visit_print_stmt;
+
     return p_evaluator;
 }
 value_t * ast_evaluator_evaluate_expression(ast_evaluator_t * p_evaluator, const expr_t * expr_p) {
@@ -99,7 +102,7 @@ static bool value_equals(const value_t * a, const value_t * b) {
         default: return false;
     }
 }
-static void* visit_literal_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
+static void * visit_literal_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
     (void)visitor, (void)context;
     const expr_literal_t* literal_p = &expr->as.literal_expr;
     value_t* val = memory_allocate(sizeof(value_t));
@@ -130,7 +133,7 @@ static void* visit_literal_expr(const expr_t* expr, const expr_visitor_t* visito
     }
     return val;
 }
-static void* visit_unary_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
+static void * visit_unary_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
     const expr_unary_t * unary_p = &expr->as.unary_expr;
     value_t * right = expr_accept(unary_p->right, visitor, context);
 
@@ -158,7 +161,7 @@ static void* visit_unary_expr(const expr_t* expr, const expr_visitor_t* visitor,
     value_free(right);
     return result;
 }
-static void* visit_binary_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
+static void * visit_binary_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
     const expr_binary_t * binary_p = &expr->as.binary_expr;
 
     value_t * left = expr_accept(binary_p->left, visitor, context);
@@ -214,13 +217,41 @@ static void* visit_binary_expr(const expr_t* expr, const expr_visitor_t* visitor
     value_free(right);
     return result;
 }
-static void* visit_grouping_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
+static void * visit_grouping_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
     const expr_grouping_t * grouping_p = &expr->as.grouping_expr;
     return expr_accept(grouping_p->expression, visitor, context);
 }
 static void * eval_unimpl_expr(const expr_t * expr, const expr_visitor_t * v, void * ctx) {
     (void)expr; (void)v; (void)ctx;
     printf("Unimplemented expression: %s", g_expr_type_names[expr->type]);
+    return NULL;
+}
+static void * visit_expression_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx) {
+    const ast_evaluator_t * evaluator = ctx;
+    expr_accept(stmt->as.expression_stmt.expression, &evaluator->expr_visitor, ctx);
+    return NULL;
+}
+const char * stringify(const value_t * p_value) {
+    static char num_buffer[32]; // static buffer for numbers (not thread-safe) TODO better method
+    switch (p_value->type) {
+        case VAL_STRING:
+            return p_value->as.string;
+        case VAL_NUMBER:
+            snprintf(num_buffer, sizeof(num_buffer), "%g", p_value->as.number);
+            return num_buffer;
+        case VAL_BOOL:
+            return p_value->as.boolean ? "true" : "false";
+        case VAL_NIL:
+            return "nil";
+        default:
+            return "stringify_error";
+    }
+}
+static void * visit_print_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx) {
+    const ast_evaluator_t * evaluator = ctx;
+    const value_t * p_value = expr_accept(stmt->as.print_stmt.expression, &evaluator->expr_visitor, ctx);
+    printf("%s", stringify(p_value));
+    memory_free((void**)&p_value);
     return NULL;
 }
 static void * eval_unimpl_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx) {

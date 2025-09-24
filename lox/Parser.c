@@ -4,6 +4,8 @@
 #include "Parser.h"
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdlib.h>
+
 #include "../extra/Arrays.h"
 #include "../extra/Memory.h"
 #include "Token.h"
@@ -20,7 +22,14 @@
     primary        → NUMBER | STRING | "true" | "false" | "nil"
                    | "(" expression ")" ;
 
+    program         -> statement* EOF ;
+    statement       -> exprStmt | printStmt ;
+    exprStmt        -> expression ";" ;
+    printStmt       -> "print" expression ";" ;
+
 */
+
+
 struct parser {
     dynamic_array_t * tokens;
     size_t current;
@@ -44,6 +53,7 @@ static expr_t* parse_term(parser_t* parser);
 static expr_t* parse_factor(parser_t* parser);
 static expr_t* parse_unary(parser_t* parser);
 static expr_t* parse_primary(parser_t* parser);
+static stmt_t * statement(parser_t * p_parser);
 // Public API
 const char* g_expr_type_names[] = {
     "EXPR_ASSIGN",
@@ -90,6 +100,9 @@ parser_t * parser_init(const dynamic_array_t * tokens) {
 }
 expr_t * parser_parse_expression(parser_t * p_parser) {
     return parse_expression(p_parser);
+}
+stmt_t * parser_parse_statement(parser_t * p_parser) {
+    return statement(p_parser);
 }
 void parser_free(parser_t * p_parser) {
     if (!p_parser) return;
@@ -155,6 +168,9 @@ void free_expression(expr_t* expr) {
             break;
     }
     memory_free((void**)&expr);
+}
+void free_statement(stmt_t* stmt) {
+
 }
 // Private functions
 static expr_t* parse_expression(parser_t* parser) {
@@ -273,7 +289,7 @@ static expr_t* parse_primary(parser_t* parser) {
     }
     // If none matched, error
     printf("Error: Expected expression.\n");
-    // TODO: fix some other way
+    // TODO fix some other way
     g_error_flag = true; // sets global error flag
     return NULL;
 }
@@ -315,4 +331,33 @@ static token_t token_previous(const parser_t* parser) {
 static token_t* token_previous_ptr(const parser_t* parser) {
     if (parser->current == 0) return NULL;
     return array_get(parser->tokens, (parser->current - 1) * sizeof(token_t));
+}
+static token_t consume(parser_t * p_parser, token_type_t type, const char * message) {
+    if (token_check(p_parser, type)) {
+        return token_advance(p_parser);
+    }
+    fprintf(stderr, "%s\n", message);
+    exit(EXIT_FAILURE);
+}
+static stmt_t * print_statement(parser_t * p_parser) {
+    expr_t* expr = parse_expression(p_parser);
+    consume(p_parser, SEMICOLON, "Expected ';' after value.");
+    stmt_t * print_stmt = memory_allocate(sizeof(stmt_t));
+    print_stmt->type = STMT_PRINT;
+    print_stmt->as.print_stmt.expression = expr;
+    return print_stmt;
+}
+static stmt_t * expression_statement(parser_t * p_parser) {
+    expr_t* expr = parse_expression(p_parser);
+    consume(p_parser, SEMICOLON, "Expected ';' after expression.");
+    stmt_t * expr_stmt = memory_allocate(sizeof(stmt_t));
+    expr_stmt->type = STMT_EXPRESSION;
+    expr_stmt->as.expression_stmt.expression = expr;
+    return expr_stmt;
+}
+static stmt_t * statement(parser_t * p_parser) {
+    if (token_match(p_parser, 1, PRINT)) {
+        return print_statement(p_parser);
+    }
+    return expression_statement(p_parser);
 }
