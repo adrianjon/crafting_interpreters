@@ -18,7 +18,7 @@ typedef struct {
     size_t capacity; // in
 } dynamic_array_t;
 
-dynamic_array_t create_array(size_t initial_capacity);
+dynamic_array_t * create_array(size_t initial_capacity);
 void array_push(dynamic_array_t* array, const void* element, size_t element_size);
 void* array_get(const dynamic_array_t* array, size_t index);
 void array_free(dynamic_array_t* array);

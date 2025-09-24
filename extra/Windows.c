@@ -115,3 +115,12 @@ file_t* write_file(const char* filename, const char* data, size_t size) {
     f->size = size;
     return f;
 }
+void free_file(file_t* f) {
+    if (!f->buffer) {
+        return;
+    }
+    memory_free((void**)&f->buffer);
+    f->size = 0;
+    memory_free((void**)&f);
+    f = NULL;
+}

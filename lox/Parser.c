@@ -75,8 +75,12 @@ parser_t * parser_init(const dynamic_array_t * tokens) {
 
     // owns copy of token array, need to free
     parser_t * parser = memory_allocate(sizeof(parser_t));
-    parser->tokens = memory_allocate(tokens->capacity);
-    memory_copy((void*)parser->tokens, tokens, tokens->capacity);
+    parser->tokens = memory_allocate(sizeof(dynamic_array_t));
+    parser->tokens->data = memory_allocate(tokens->capacity);
+    memory_copy(parser->tokens->data, tokens->data, tokens->capacity);
+    parser->tokens->size = tokens->size;
+    parser->tokens->capacity = tokens->capacity;
+
     parser->current = 0;
     parser->current_token = NULL;
     parser->had_error = false;
@@ -94,7 +98,7 @@ void parser_free(parser_t * p_parser) {
         p_parser->tokens->data = NULL;
         p_parser->tokens->capacity = 0;
         p_parser->tokens->size = 0;
-        memory_free((void**)p_parser->tokens);
+        //memory_free((void**)&p_parser->tokens);
     }
     memory_free((void**)&p_parser);
     p_parser = NULL;
@@ -109,6 +113,7 @@ void free_expression(expr_t* expr) {
             break;
         case EXPR_BINARY:
             free_expression(expr->as.binary_expr.left);
+            memory_free((void**)&expr->as.binary_expr.operator);
             free_expression(expr->as.binary_expr.right);
             break;
         case EXPR_CALL:
@@ -127,6 +132,7 @@ void free_expression(expr_t* expr) {
             free_expression(expr->as.grouping_expr.expression);
             break;
         case EXPR_LITERAL:
+            memory_free((void**)&expr->as.literal_expr.kind);
             break;
         case EXPR_LOGICAL:
             free_expression(expr->as.logical_expr.left);
@@ -148,6 +154,7 @@ void free_expression(expr_t* expr) {
         default:
             break;
     }
+    memory_free((void**)&expr);
 }
 // Private functions
 static expr_t* parse_expression(parser_t* parser) {
@@ -158,7 +165,10 @@ static expr_t* parse_equality(parser_t* parser) {
     //    equality       → comparison ( ( "!=" | "==" ) comparison )* ;
     expr_t* expr = parse_comparison(parser);
     while (token_match(parser, 2, BANG_EQUAL, EQUAL_EQUAL)) {
-        token_t* operator = token_previous_ptr(parser);
+        token_t * operator = memory_allocate(sizeof(token_t));
+        if (!memory_copy(operator, token_previous_ptr(parser), sizeof(token_t))) {
+            printf("memory copy failed\n");
+        }
         expr_t* right = parse_comparison(parser);
         const expr_binary_t binary_expr = { .left = expr, .operator = operator, .right = right };
         expr_t* new_expr = memory_allocate(sizeof(expr_t));
@@ -172,7 +182,10 @@ static expr_t* parse_comparison(parser_t* parser) {
     //    comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
     expr_t* expr = parse_term(parser);
     while (token_match(parser, 4, LESS, LESS_EQUAL, GREATER, GREATER_EQUAL)) {
-        token_t* operator = token_previous_ptr(parser);
+        token_t * operator = memory_allocate(sizeof(token_t));
+        if (!memory_copy(operator, token_previous_ptr(parser), sizeof(token_t))) {
+            printf("memory copy failed\n");
+        }
         expr_t* right = parse_term(parser);
         const expr_binary_t binary_expr = { .left = expr, .operator = operator, .right = right };
         expr_t* new_expr = memory_allocate(sizeof(expr_t));
@@ -186,7 +199,10 @@ static expr_t* parse_term(parser_t* parser) {
     // term           → factor ( ( "-" | "+" ) factor )* ;
     expr_t* expr = parse_factor(parser);
     while (token_match(parser, 2, MINUS, PLUS)) {
-        token_t* operator = token_previous_ptr(parser);
+        token_t * operator = memory_allocate(sizeof(token_t));
+        if (!memory_copy(operator, token_previous_ptr(parser), sizeof(token_t))) {
+            printf("memory copy failed\n");
+        }
         expr_t* right = parse_factor(parser);
         const expr_binary_t binary_expr = { .left = expr, .operator = operator, .right = right };
         expr_t* new_expr = memory_allocate(sizeof(expr_t));
@@ -200,7 +216,10 @@ static expr_t* parse_factor(parser_t* parser) {
     // factor         → unary ( ( "/" | "*" ) unary )* ;
     expr_t* expr = parse_unary(parser);
     while (token_match(parser, 2, SLASH, STAR)) {
-        token_t* operator = token_previous_ptr(parser);
+        token_t * operator = memory_allocate(sizeof(token_t));
+        if (!memory_copy(operator, token_previous_ptr(parser), sizeof(token_t))) {
+            printf("memory copy failed\n");
+        }
         expr_t* right = parse_unary(parser);
         const expr_binary_t binary_expr = { .left = expr, .operator = operator, .right = right };
         expr_t* new_expr = memory_allocate(sizeof(expr_t));
@@ -228,10 +247,14 @@ static expr_t* parse_primary(parser_t* parser) {
     // primary        → NUMBER | STRING | "true" | "false" | "nil"
     //                | "(" expression ")" ;
     if (token_match(parser, 5, NUMBER, STRING, KW_TRUE, KW_FALSE, NIL)) {
-        token_t* number_token = token_previous_ptr(parser);
+        const token_t* number_token = token_previous_ptr(parser);
         expr_t* expr = memory_allocate(sizeof(expr_t));
         expr->type = EXPR_LITERAL;
-        expr->as.literal_expr.kind = number_token;
+        // needs to copy token here (TODO free token
+        expr->as.literal_expr.kind = memory_allocate(sizeof(token_t));
+        if (!memory_copy(expr->as.literal_expr.kind, number_token, sizeof(token_t))) {
+            printf("memory copy failed\n");
+        }
         return expr;
     }
     if (token_match(parser, 1, LEFT_PAREN)) {

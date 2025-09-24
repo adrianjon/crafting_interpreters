@@ -13,7 +13,7 @@ struct scanner{
     const char* p_start;
     const char* p_current;
     int line;
-    dynamic_array_t tokens;
+    dynamic_array_t * tokens;
 };
 // Forward declarations
 static void add_token(const token_type_t type, const char * lexeme, const int line, dynamic_array_t * tokens);
@@ -54,43 +54,43 @@ void scanner_scan(scanner_t * p_scanner) {
         size_t length;
         char buffer[256] = {0}; // TODO
         switch (c) {
-            case '(': add_token(LEFT_PAREN, "(", scanner_get_line(p_scanner), &p_scanner->tokens);
+            case '(': add_token(LEFT_PAREN, "(", scanner_get_line(p_scanner), p_scanner->tokens);
                 break;
-            case ')': add_token(RIGHT_PAREN, ")", scanner_get_line(p_scanner), &p_scanner->tokens);
+            case ')': add_token(RIGHT_PAREN, ")", scanner_get_line(p_scanner), p_scanner->tokens);
                 break;
-            case '{': add_token(LEFT_BRACE, "{", scanner_get_line(p_scanner), &p_scanner->tokens);
+            case '{': add_token(LEFT_BRACE, "{", scanner_get_line(p_scanner), p_scanner->tokens);
                 break;
-            case '}': add_token(RIGHT_BRACE, "}", scanner_get_line(p_scanner), &p_scanner->tokens);
+            case '}': add_token(RIGHT_BRACE, "}", scanner_get_line(p_scanner), p_scanner->tokens);
                 break;
-            case ',': add_token(COMMA, ",", scanner_get_line(p_scanner), &p_scanner->tokens);
+            case ',': add_token(COMMA, ",", scanner_get_line(p_scanner), p_scanner->tokens);
                 break;
-            case '.': add_token(DOT, ".", scanner_get_line(p_scanner), &p_scanner->tokens);
+            case '.': add_token(DOT, ".", scanner_get_line(p_scanner), p_scanner->tokens);
                 break;
-            case '+': add_token(PLUS, "+", scanner_get_line(p_scanner), &p_scanner->tokens);
+            case '+': add_token(PLUS, "+", scanner_get_line(p_scanner), p_scanner->tokens);
                 break;
-            case '-': add_token(MINUS, "-", scanner_get_line(p_scanner), &p_scanner->tokens);
+            case '-': add_token(MINUS, "-", scanner_get_line(p_scanner), p_scanner->tokens);
                 break;
-            case ';': add_token(SEMICOLON, ";", scanner_get_line(p_scanner), &p_scanner->tokens);
+            case ';': add_token(SEMICOLON, ";", scanner_get_line(p_scanner), p_scanner->tokens);
                 break;
-            case ':': add_token(COLON, ":", scanner_get_line(p_scanner), &p_scanner->tokens);
+            case ':': add_token(COLON, ":", scanner_get_line(p_scanner), p_scanner->tokens);
                 break;
-            case '*': add_token(STAR, "*", scanner_get_line(p_scanner), &p_scanner->tokens);
+            case '*': add_token(STAR, "*", scanner_get_line(p_scanner), p_scanner->tokens);
                 break;
             case '!':
                 is_equal = match(p_scanner, '=', scanner_peek(p_scanner));
-                add_token(is_equal ? BANG_EQUAL : BANG, is_equal ? "!=" : "!", scanner_get_line(p_scanner), &p_scanner->tokens);
+                add_token(is_equal ? BANG_EQUAL : BANG, is_equal ? "!=" : "!", scanner_get_line(p_scanner), p_scanner->tokens);
                 break;
             case '=':
                 is_equal = match(p_scanner, '=', scanner_peek(p_scanner));
-                add_token(is_equal ? EQUAL_EQUAL : EQUAL, is_equal ? "==" : "=", scanner_get_line(p_scanner), &p_scanner->tokens);
+                add_token(is_equal ? EQUAL_EQUAL : EQUAL, is_equal ? "==" : "=", scanner_get_line(p_scanner), p_scanner->tokens);
                 break;
             case '<':
                 is_equal = match(p_scanner, '=', scanner_peek(p_scanner));
-                add_token(is_equal ? LESS_EQUAL : LESS, is_equal ? "<=" : "<", scanner_get_line(p_scanner), &p_scanner->tokens);
+                add_token(is_equal ? LESS_EQUAL : LESS, is_equal ? "<=" : "<", scanner_get_line(p_scanner), p_scanner->tokens);
                 break;
             case '>':
                 is_equal = match(p_scanner, '=', scanner_peek(p_scanner));
-                add_token(is_equal ? GREATER_EQUAL : GREATER, is_equal ? ">=" : ">", scanner_get_line(p_scanner), &p_scanner->tokens);
+                add_token(is_equal ? GREATER_EQUAL : GREATER, is_equal ? ">=" : ">", scanner_get_line(p_scanner), p_scanner->tokens);
                 break;
             case '/':
                 if (match(p_scanner, '/', scanner_peek(p_scanner))) {
@@ -117,7 +117,7 @@ void scanner_scan(scanner_t * p_scanner) {
                         print_error("Unterminated multi-line comment");
                     }
                 } else {
-                    add_token(SLASH, "/", scanner_get_line(p_scanner), &p_scanner->tokens);
+                    add_token(SLASH, "/", scanner_get_line(p_scanner), p_scanner->tokens);
                 }
                 break;
             case ' ':
@@ -139,7 +139,7 @@ void scanner_scan(scanner_t * p_scanner) {
                 memory_copy(buffer, start + 1, length - 2); // exclude quotes bug here
                 buffer[length - 2] = '\0';
 
-                add_token(STRING, buffer, scanner_get_line(p_scanner), &p_scanner->tokens);
+                add_token(STRING, buffer, scanner_get_line(p_scanner), p_scanner->tokens);
                 break;
             default:
                 if (is_digit(c)) {
@@ -149,7 +149,7 @@ void scanner_scan(scanner_t * p_scanner) {
 
                     memory_copy(buffer, start, length);
                     buffer[length] = '\0';
-                    add_token(NUMBER, buffer, scanner_get_line(p_scanner), &p_scanner->tokens);
+                    add_token(NUMBER, buffer, scanner_get_line(p_scanner), p_scanner->tokens);
                 } else if (is_alpha(c)) {
                     start = scanner_previous(p_scanner);
                     identifier(p_scanner);
@@ -157,22 +157,22 @@ void scanner_scan(scanner_t * p_scanner) {
                     memory_copy(buffer, start, length);
                     buffer[length] = '\0';
                     const token_type_t type = get_keyword_type(buffer);
-                    add_token(type, buffer, scanner_get_line(p_scanner), &p_scanner->tokens);
+                    add_token(type, buffer, scanner_get_line(p_scanner), p_scanner->tokens);
                 } else {
                     print_error("Unexpected character");
                 }
                 break;
         }
     }
-    add_token(END_OF_FILE, NULL, scanner_get_line(p_scanner), &p_scanner->tokens);
-    printf("Scanning complete. Total tokens: %zu\n", p_scanner->tokens.size / sizeof(token_t));
+    add_token(END_OF_FILE, NULL, scanner_get_line(p_scanner), p_scanner->tokens);
+    printf("Scanning complete. Total tokens: %zu\n", p_scanner->tokens->size / sizeof(token_t));
 
 }
 const dynamic_array_t * scanner_get_tokens(const scanner_t * p_scanner) {
-    return &p_scanner->tokens;
+    return p_scanner->tokens;
 }
 void scanner_print_tokens(const scanner_t * p_scanner) {
-    const dynamic_array_t * tokens = &p_scanner->tokens;
+    const dynamic_array_t * tokens = p_scanner->tokens;
     for (size_t i = 0; i < tokens->size / sizeof(token_t); i++) {
         const token_t * token = (token_t *) array_get(tokens, i * sizeof(token_t));
         print("Token: ");
@@ -187,12 +187,13 @@ void scanner_print_tokens(const scanner_t * p_scanner) {
 }
 void scanner_free(scanner_t * p_scanner) {
     if (!p_scanner) return;
-    if (p_scanner->tokens.data) {
-        array_free(&p_scanner->tokens);
-        p_scanner->tokens.data = NULL;
-        p_scanner->tokens.capacity = 0;
-        p_scanner->tokens.size = 0;
+    if (p_scanner->tokens->data) {
+        array_free(p_scanner->tokens);
+        p_scanner->tokens->data = NULL;
+        p_scanner->tokens->capacity = 0;
+        p_scanner->tokens->size = 0;
     }
+    free_file(p_scanner->p_target_file);
     memory_free((void**)&p_scanner);
     p_scanner = NULL;
 }

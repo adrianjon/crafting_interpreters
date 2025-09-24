@@ -10,12 +10,11 @@
 #include "Windows.h"
 //#include <stdlib.h>
 
-dynamic_array_t create_array(size_t initial_capacity) {
-    dynamic_array_t array;
-    array.data = memory_allocate(initial_capacity);
-    printf("MEMORY: %p\n", array.data);
-    array.size = 0;
-    array.capacity = initial_capacity;
+dynamic_array_t * create_array(size_t initial_capacity) {
+    dynamic_array_t * array = memory_allocate(sizeof(dynamic_array_t));
+    array->data = memory_allocate(initial_capacity);
+    array->size = 0;
+    array->capacity = initial_capacity;
     return array;
 }
 

@@ -21,5 +21,6 @@ void print_error(const char* str);
 
 file_t* read_file(const char* filename);
 file_t* write_file(const char* filename, const char* data, size_t size);
+void free_file(file_t* f);
 
 #endif //LOX_WINDOWS_H

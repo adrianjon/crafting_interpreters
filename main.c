@@ -11,10 +11,13 @@
 // #include "lox/Stmt.h"
 #include "extra/Memory.h"
 #include "lox/ast_interpreter.h"
-
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
 
 // TODO fix free functions. Exception occurs during scanner_free()
 int main(void) {
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+
     scanner_t * p_scanner = scanner_init("lox.txt");
     scanner_scan(p_scanner);
     scanner_print_tokens(p_scanner);
@@ -24,8 +27,8 @@ int main(void) {
     expr_t* expr = parser_parse_expression(p_parser);
     // expression tree stores lexemes, should be free to free scanner and parser here
 
-    // parser_free(p_parser);
-    // scanner_free(p_scanner);
+    parser_free(p_parser);
+    scanner_free(p_scanner);
 
     if (!expr) {
         printf("Failed to parse expression\n");
@@ -43,6 +46,7 @@ int main(void) {
         printf("AST Printer Result: %s\n", result);
         memory_free((void**)&result);
     }
+    ast_printer_free(printer);
 
     ast_evaluator_t * evaluator_p = ast_evaluator_init();
     value_t* val = ast_evaluator_eval_expr(evaluator_p, expr);
@@ -63,8 +67,6 @@ int main(void) {
 
     ast_evaluator_free(evaluator_p);
     free_expression(expr);
-    // parser_free(p_parser);
-    // scanner_free(p_scanner);
 
     return 0;
 }
