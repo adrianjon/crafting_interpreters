@@ -1,2 +1,3 @@
-var sum = ((2 * 3) + 4) / 5;
-print sum == 2;
+var sum = ((2 * 3) + 4) / 3;
+print sum;
+print sum = 2;

@@ -9,6 +9,7 @@
 
 #include "Parser.h"
 #include "Token.h"
+#include "Environment.h"
 #include "../extra/Memory.h"
 struct ast_evaluator {
     value_t last_result;
@@ -251,8 +252,9 @@ static void * visit_assignment_expr(const expr_t * expr, const expr_visitor_t * 
     const expr_assign_t * p_expr = &expr->as.assign_expr;
     ast_evaluator_t * p_evaluator = context;
 
-    set_global(p_expr->name->lexeme, ast_evaluator_eval_expr(p_evaluator, p_expr->value));
-    return NULL;
+    value_t * p_val = ast_evaluator_eval_expr(p_evaluator, p_expr->value);
+    set_global(p_expr->name->lexeme, p_val);
+    return p_val;
 }
 static void * eval_unimpl_expr(const expr_t * expr, const expr_visitor_t * v, void * ctx) {
     (void)expr; (void)v; (void)ctx;
