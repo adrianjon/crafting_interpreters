@@ -12,7 +12,8 @@
 #include "Expr.h"
 #include "Stmt.h"
 /* new grammar
-    expression     → equality ;
+    expression     → assignment ;
+    assignment     → IDENTIFIER "=" assignment | equality ;
     equality       → comparison ( ( "!=" | "==" ) comparison )* ;
     comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
     term           → factor ( ( "-" | "+" ) factor )* ;
@@ -49,6 +50,7 @@ static bool token_is_at_end(const parser_t* parser);
 static token_t token_previous(const parser_t* parser);
 static token_t* token_previous_ptr(const parser_t* parser);
 static expr_t* parse_expression(parser_t* parser);
+static expr_t * parse_assignment(parser_t * p_parser);
 static expr_t* parse_equality(parser_t* parser);
 static expr_t* parse_comparison(parser_t* parser);
 static expr_t* parse_term(parser_t* parser);
@@ -221,8 +223,34 @@ void free_statement(stmt_t* stmt) {
 }
 // Private functions
 static expr_t* parse_expression(parser_t* parser) {
-    //    expression     → equality
-    return parse_equality(parser);
+    //      expression     → assignment
+    return parse_assignment(parser);
+}
+static expr_t * parse_assignment(parser_t * p_parser) {
+    //      assignment     → IDENTIFIER "=" assignment | equality ;
+    expr_t * p_expr = parse_equality(p_parser);
+    if (token_match(p_parser, 1, EQUAL)) {
+        token_t * equals = memory_allocate(sizeof(token_t));
+        if (!memory_copy(equals, token_previous_ptr(p_parser), sizeof(token_t))) {
+            printf("memory copy failed\n");
+            exit(EXIT_FAILURE);
+        }
+        expr_t * value = parse_assignment(p_parser);
+        if (p_expr->type == EXPR_VARIABLE) {
+            token_t * name = memory_allocate(sizeof(token_t));
+            if (!memory_copy(name, p_expr->as.variable_expr.name, sizeof(token_t))) {
+                printf("memory copy failed\n");
+                exit(EXIT_FAILURE);
+            }
+            const expr_assign_t assign_expr = { .name = name, .value = value};
+            expr_t * new_expr = memory_allocate(sizeof(expr_t));
+            new_expr->type = EXPR_ASSIGN;
+            new_expr->as.assign_expr = assign_expr;
+            return new_expr;
+        }
+        printf("Error, invalid assignment target\n");
+    }
+    return p_expr;
 }
 static expr_t* parse_equality(parser_t* parser) {
     //    equality       → comparison ( ( "!=" | "==" ) comparison )* ;
@@ -231,6 +259,7 @@ static expr_t* parse_equality(parser_t* parser) {
         token_t * operator = memory_allocate(sizeof(token_t));
         if (!memory_copy(operator, token_previous_ptr(parser), sizeof(token_t))) {
             printf("memory copy failed\n");
+            exit(EXIT_FAILURE);
         }
         expr_t* right = parse_comparison(parser);
         const expr_binary_t binary_expr = { .left = expr, .operator = operator, .right = right };
@@ -248,6 +277,7 @@ static expr_t* parse_comparison(parser_t* parser) {
         token_t * operator = memory_allocate(sizeof(token_t));
         if (!memory_copy(operator, token_previous_ptr(parser), sizeof(token_t))) {
             printf("memory copy failed\n");
+            exit(EXIT_FAILURE);
         }
         expr_t* right = parse_term(parser);
         const expr_binary_t binary_expr = { .left = expr, .operator = operator, .right = right };
@@ -265,6 +295,7 @@ static expr_t* parse_term(parser_t* parser) {
         token_t * operator = memory_allocate(sizeof(token_t));
         if (!memory_copy(operator, token_previous_ptr(parser), sizeof(token_t))) {
             printf("memory copy failed\n");
+            exit(EXIT_FAILURE);
         }
         expr_t* right = parse_factor(parser);
         const expr_binary_t binary_expr = { .left = expr, .operator = operator, .right = right };
@@ -282,6 +313,7 @@ static expr_t* parse_factor(parser_t* parser) {
         token_t * operator = memory_allocate(sizeof(token_t));
         if (!memory_copy(operator, token_previous_ptr(parser), sizeof(token_t))) {
             printf("memory copy failed\n");
+            exit(EXIT_FAILURE);
         }
         expr_t* right = parse_unary(parser);
         const expr_binary_t binary_expr = { .left = expr, .operator = operator, .right = right };
@@ -352,7 +384,9 @@ static expr_t* parse_primary(parser_t* parser) {
 }
 static token_t token_advance(parser_t* parser) {
     if (!token_is_at_end(parser)) {
+        parser->previous = (token_t*)parser->tokens->data + parser->current;
         parser->current++;
+        parser->current_token = (token_t*)parser->tokens->data + parser->current;
     }
     return token_previous(parser);
 }
@@ -413,12 +447,17 @@ static stmt_t * expression_statement(parser_t * p_parser) {
     return expr_stmt;
 }
 static stmt_t * var_declaration(parser_t * p_parser) {
-    const token_t token = consume(p_parser, IDENTIFIER, "Expect variable name.");
-
+    // declaration     -> varDecl | statement ;
     expr_t * initializer = NULL;
-    if (token_match(p_parser, 1, EQUAL)) {
+    if (token_check(p_parser, IDENTIFIER)) {
         initializer = parse_expression(p_parser);
     }
+    const token_t token = consume(p_parser, IDENTIFIER, "Expect variable name.");
+
+    // expr_t * initializer = NULL;
+    // if (token_check(p_parser, EQUAL)) {
+    //     initializer = parse_expression(p_parser);
+    // }
     consume(p_parser, SEMICOLON, "Expected ';' after variable declaration.");
     stmt_t * var_decl_stmt = memory_allocate(sizeof(stmt_t));
     var_decl_stmt->type = STMT_VAR;

@@ -1,4 +1,4 @@
-var leak_here_questionmark = "hello big leak here";
+var text = "Hello from lox!";
 print leak_here_questionmark;
 // 2 + 5 == 7;
 // print("hello world");
