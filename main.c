@@ -28,8 +28,10 @@ void set_global(const char * name, value_t * value) {
             if (value->type == VAL_STRING) {
                 g_globals[i].value.type = VAL_STRING;
                 g_globals[i].value.as.string = strdup(value->as.string); // TODO need to free
+                g_globals[i].value.is_on_heap = false;
             } else {
                 g_globals[i].value = *value;
+                g_globals[i].value.is_on_heap = false;
             }
 
             return;
@@ -40,8 +42,10 @@ void set_global(const char * name, value_t * value) {
         if (value->type == VAL_STRING) {
             g_globals[g_globals_count].value.type = VAL_STRING;
             g_globals[g_globals_count].value.as.string = strdup(value->as.string);
+            g_globals[g_globals_count].value.is_on_heap = false;
         } else {
             g_globals[g_globals_count].value = *value;
+            g_globals[g_globals_count].value.is_on_heap = false;
         }
         ++g_globals_count;
     } else {

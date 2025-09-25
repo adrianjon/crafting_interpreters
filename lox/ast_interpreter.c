@@ -29,6 +29,7 @@ static void* visit_unary_expr(const expr_t* expr, const expr_visitor_t* visitor,
 static void* visit_binary_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context);
 static void* visit_grouping_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context);
 static void * visit_variable_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context);
+static void * visit_assignment_expr(const expr_t * expr, const expr_visitor_t * visitor, void * context);
 static void * eval_unimpl_expr(const expr_t * expr, const expr_visitor_t * v, void * ctx);
 static void * visit_print_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx);
 static void * visit_expression_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx);
@@ -71,6 +72,7 @@ ast_evaluator_t * ast_evaluator_init(void) {
     p_evaluator->expr_visitor.visit_unary = visit_unary_expr;
     p_evaluator->expr_visitor.visit_grouping = visit_grouping_expr;
     p_evaluator->expr_visitor.visit_variable = visit_variable_expr;
+    p_evaluator->expr_visitor.visit_assign = visit_assignment_expr;
 
     p_evaluator->stmt_visitor.visit_print = visit_print_stmt;
     p_evaluator->stmt_visitor.visit_expression = visit_expression_stmt;
@@ -99,7 +101,10 @@ static void value_free(value_t * val) {
     // if (val->type == VAL_STRING) {
     //     memory_free((void**)&val->as.string);
     // }
-    memory_free((void**)&val);
+    if (!val) return;
+    if (val->is_on_heap) {
+        memory_free((void**)&val);
+    }
 }
 static bool value_is_truthy(const value_t * val) {
     if (val->type == VAL_NIL) return false;
@@ -120,6 +125,7 @@ static void * visit_literal_expr(const expr_t* expr, const expr_visitor_t* visit
     (void)visitor, (void)context;
     const expr_literal_t* literal_p = &expr->as.literal_expr;
     value_t* val = memory_allocate(sizeof(value_t));
+    val->is_on_heap = true;
 
     switch (literal_p->kind->type) {
         case NIL:
@@ -152,6 +158,7 @@ static void * visit_unary_expr(const expr_t* expr, const expr_visitor_t* visitor
     value_t * right = expr_accept(unary_p->right, visitor, context);
 
     value_t * result = memory_allocate(sizeof(value_t));
+    result->is_on_heap = true;
 
     switch (unary_p->operator->type) {
         case MINUS: // Arithmetic negation
@@ -182,6 +189,7 @@ static void * visit_binary_expr(const expr_t* expr, const expr_visitor_t* visito
     value_t * right = expr_accept(binary_p->right, visitor, context);
 
     value_t * result = memory_allocate(sizeof(value_t));
+    result->is_on_heap = true;
 
     switch (binary_p->operator->type) {
         case PLUS:
@@ -238,6 +246,13 @@ static void * visit_grouping_expr(const expr_t* expr, const expr_visitor_t* visi
 static void * visit_variable_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
     const expr_variable_t * p_expr = &expr->as.variable_expr;
     return get_global(p_expr->name->lexeme);
+}
+static void * visit_assignment_expr(const expr_t * expr, const expr_visitor_t * visitor, void * context) {
+    const expr_assign_t * p_expr = &expr->as.assign_expr;
+    ast_evaluator_t * p_evaluator = context;
+
+    set_global(p_expr->name->lexeme, ast_evaluator_eval_expr(p_evaluator, p_expr->value));
+    return NULL;
 }
 static void * eval_unimpl_expr(const expr_t * expr, const expr_visitor_t * v, void * ctx) {
     (void)expr; (void)v; (void)ctx;

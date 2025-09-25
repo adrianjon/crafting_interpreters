@@ -1,3 +1,2 @@
 var sum = ((2 * 3) + 4) / 5;
-print "The sum is: ";
-print sum;
+print sum == 2;

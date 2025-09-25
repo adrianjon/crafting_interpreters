@@ -22,6 +22,7 @@ typedef struct {
         char* string;
         bool boolean;
     } as;
+    bool is_on_heap;
 } value_t;
 typedef struct ast_evaluator ast_evaluator_t;
 
