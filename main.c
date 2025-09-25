@@ -13,8 +13,11 @@
 #include "extra/Memory.h"
 #include <string.h>
 #include "lox/ast_interpreter.h"
+#include "lox/Environment.h"
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
+
+environment_t * g_scope = NULL;
 
 int main(void) {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
@@ -24,6 +27,8 @@ int main(void) {
     parser_t * p_parser = parser_init(scanner_get_tokens(p_scanner));
 
     ast_evaluator_t * p_evaluator = ast_evaluator_init();
+
+    g_scope = init_global_scope();
 
     // TODO this should be a function that takes a list of statements as input
     while (parser_get_current_token_type(p_parser) != END_OF_FILE) {
@@ -38,6 +43,6 @@ int main(void) {
 
     ast_evaluator_free(p_evaluator);
 
-    free_globals();
+    free_environment(g_scope);
     return 0;
 }

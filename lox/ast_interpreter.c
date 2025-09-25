@@ -21,8 +21,10 @@ struct ast_evaluator {
     stmt_visitor_t stmt_visitor;
 };
 // Externs TODO change this
-extern void set_global(const char * name, value_t * value);
-value_t * get_global(const char * name);
+
+extern environment_t * g_scope;
+// extern void set_global(const char * name, value_t * value);
+// value_t * get_global(const char * name);
 
 // Forward declarations
 static void* visit_literal_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context);
@@ -246,14 +248,14 @@ static void * visit_grouping_expr(const expr_t* expr, const expr_visitor_t* visi
 }
 static void * visit_variable_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
     const expr_variable_t * p_expr = &expr->as.variable_expr;
-    return get_global(p_expr->name->lexeme);
+    return env_lookup(g_scope, p_expr->name->lexeme);
 }
 static void * visit_assignment_expr(const expr_t * expr, const expr_visitor_t * visitor, void * context) {
     const expr_assign_t * p_expr = &expr->as.assign_expr;
     ast_evaluator_t * p_evaluator = context;
 
     value_t * p_val = ast_evaluator_eval_expr(p_evaluator, p_expr->value);
-    set_global(p_expr->name->lexeme, p_val);
+    assign_variable(g_scope, p_expr->name->lexeme, p_val);
     return p_val;
 }
 static void * eval_unimpl_expr(const expr_t * expr, const expr_visitor_t * v, void * ctx) {
@@ -264,12 +266,10 @@ static void * eval_unimpl_expr(const expr_t * expr, const expr_visitor_t * v, vo
 static void * visit_variable_stmt(const stmt_t * stmt, const stmt_visitor_t * visitor, void * context) {
 
     const ast_evaluator_t * evaluator = context;
-    value_t * p_value = expr_accept(stmt->as.var_stmt.initializer, &evaluator->expr_visitor, context);
-    set_global(stmt->as.var_stmt.name->lexeme, p_value);
-    // if (p_value->type == VAL_STRING) {
-    //     memory_free((void**)&p_value->as.string);
-    // }
-    memory_free((void**)&p_value);
+    value_t * p_val = expr_accept(stmt->as.var_stmt.initializer, &evaluator->expr_visitor, context);
+
+    assign_variable(g_scope, stmt->as.var_stmt.name->lexeme, p_val);
+    memory_free((void**)&p_val);
     return NULL;
 }
 static void * visit_expression_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx) {
