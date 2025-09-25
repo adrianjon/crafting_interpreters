@@ -20,7 +20,7 @@ struct ast_evaluator {
     stmt_visitor_t stmt_visitor;
 };
 // Externs TODO change this
-extern void set_global(const char * name, value_t value);
+extern void set_global(const char * name, value_t * value);
 value_t * get_global(const char * name);
 
 // Forward declarations
@@ -95,6 +95,10 @@ value_t * ast_evaluator_eval_stmt(ast_evaluator_t * p_evaluator, const stmt_t * 
 }
 // Private functions
 static void value_free(value_t * val) {
+
+    // if (val->type == VAL_STRING) {
+    //     memory_free((void**)&val->as.string);
+    // }
     memory_free((void**)&val);
 }
 static bool value_is_truthy(const value_t * val) {
@@ -243,8 +247,12 @@ static void * eval_unimpl_expr(const expr_t * expr, const expr_visitor_t * v, vo
 static void * visit_variable_stmt(const stmt_t * stmt, const stmt_visitor_t * visitor, void * context) {
 
     const ast_evaluator_t * evaluator = context;
-    const value_t * p_value = expr_accept(stmt->as.var_stmt.initializer, &evaluator->expr_visitor, context);
-    set_global(stmt->as.var_stmt.name->lexeme, *p_value);
+    value_t * p_value = expr_accept(stmt->as.var_stmt.initializer, &evaluator->expr_visitor, context);
+    set_global(stmt->as.var_stmt.name->lexeme, p_value);
+    // if (p_value->type == VAL_STRING) {
+    //     memory_free((void**)&p_value->as.string);
+    // }
+    memory_free((void**)&p_value);
     return NULL;
 }
 static void * visit_expression_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx) {

@@ -155,6 +155,9 @@ void free_expression(expr_t* expr) {
             free_expression(expr->as.grouping_expr.expression);
             break;
         case EXPR_LITERAL:
+            // if (expr->as.literal_expr.kind->type == STRING) {
+            //     memory_free((void**)&expr->as.literal_expr.kind->)
+            // }
             memory_free((void**)&expr->as.literal_expr.kind);
             break;
         case EXPR_LOGICAL:
@@ -235,6 +238,7 @@ static expr_t * parse_assignment(parser_t * p_parser) {
             printf("memory copy failed\n");
             exit(EXIT_FAILURE);
         }
+        memory_free((void**)&equals); // why do I even copy?
         expr_t * value = parse_assignment(p_parser);
         if (p_expr->type == EXPR_VARIABLE) {
             token_t * name = memory_allocate(sizeof(token_t));
@@ -449,15 +453,14 @@ static stmt_t * expression_statement(parser_t * p_parser) {
 static stmt_t * var_declaration(parser_t * p_parser) {
     // declaration     -> varDecl | statement ;
     expr_t * initializer = NULL;
-    if (token_check(p_parser, IDENTIFIER)) {
-        initializer = parse_expression(p_parser);
-    }
-    const token_t token = consume(p_parser, IDENTIFIER, "Expect variable name.");
-
-    // expr_t * initializer = NULL;
-    // if (token_check(p_parser, EQUAL)) {
+    // if (token_check(p_parser, IDENTIFIER)) {
     //     initializer = parse_expression(p_parser);
     // }
+    const token_t token = consume(p_parser, IDENTIFIER, "Expect variable name.");
+
+    if (token_match(p_parser, 1, EQUAL)) {
+        initializer = parse_expression(p_parser);
+    }
     consume(p_parser, SEMICOLON, "Expected ';' after variable declaration.");
     stmt_t * var_decl_stmt = memory_allocate(sizeof(stmt_t));
     var_decl_stmt->type = STMT_VAR;

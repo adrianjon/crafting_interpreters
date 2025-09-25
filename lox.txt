@@ -1,9 +1,3 @@
-var text = "Hello from lox!";
-print leak_here_questionmark;
-// 2 + 5 == 7;
-// print("hello world");
-//var x = 2 + 6;
-//fun add(a, b) {
-//    return a + b;
-//}
-//2 * add(2, 3);
+var sum = ((2 * 3) + 4) / 5;
+print "The sum is: ";
+print sum;
