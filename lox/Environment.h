@@ -16,6 +16,8 @@ typedef struct environment environment_t;
 // void free_globals(void);
 
 environment_t * init_global_scope(void);
+environment_t * create_environment(environment_t * p_parent_env);
+environment_t * get_parent_environment(const environment_t * p_env);
 void assign_variable(environment_t * p_env, const char * p_name, const value_t * p_val);
 void declare_variable(environment_t * p_env, const char * p_name, const value_t * p_type);
 value_t * env_lookup(environment_t * p_env, const char * p_name);

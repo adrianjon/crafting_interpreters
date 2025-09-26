@@ -1,4 +1,5 @@
-var sum = ((2 * 3) + 4) / 3;
-print sum;
-print sum = 2;
-print "poop";
+{
+var x = 5;
+var y = 3;
+print y * x;
+}

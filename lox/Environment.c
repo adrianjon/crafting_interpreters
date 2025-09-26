@@ -201,6 +201,19 @@ void free_environment(environment_t * p_env) {
     p_env->variable_count = 0;
     memory_free((void**)&p_env);
 }
+environment_t * create_environment(environment_t * p_parent_env) {
+    environment_t * p_env = memory_allocate(sizeof(environment_t));
+    p_env->parent_environment = p_parent_env;
+    p_env->variable_count = 0;
+    for (size_t i = 0; i < MAX_VARS; ++i) {
+        p_env->variables[i].name = NULL;
+        p_env->variables[i].value = (value_t){0};
+    }
+    return p_env;
+}
+environment_t * get_parent_environment(const environment_t * p_env) {
+    return p_env->parent_environment;
+}
 environment_t * init_global_scope(void) {
     environment_t * p_env = memory_allocate(sizeof(environment_t));
     p_env->parent_environment = NULL;

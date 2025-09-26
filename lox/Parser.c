@@ -25,10 +25,11 @@
 
     program         -> declaration* EOF ;
     declaration     -> varDecl | statement ;
-    statement       -> exprStmt | printStmt ;
+    statement       -> exprStmt | printStmt | block ;
     exprStmt        -> expression ";" ;
     printStmt       -> "print" expression ";" ;
     varDecl         -> "var" IDENTIFIER ( "=" expression )? ";" ;
+    block           -> "{" declaration* "}" ;
 
 */
 
@@ -57,8 +58,10 @@ static expr_t* parse_term(parser_t* parser);
 static expr_t* parse_factor(parser_t* parser);
 static expr_t* parse_unary(parser_t* parser);
 static expr_t* parse_primary(parser_t* parser);
+
 static stmt_t * statement(parser_t * p_parser);
 static stmt_t * declaration(parser_t * p_parser);
+static stmt_t * parse_block_statement(parser_t * p_parser);
 // Public API
 const char* g_expr_type_names[] = {
     "EXPR_ASSIGN",
@@ -482,5 +485,28 @@ static stmt_t * statement(parser_t * p_parser) {
     if (token_match(p_parser, 1, PRINT)) {
         return print_statement(p_parser);
     }
+    if (token_match(p_parser, 1, LEFT_BRACE)) {
+        return parse_block_statement(p_parser);
+    }
     return expression_statement(p_parser);
+}
+static stmt_t * parse_block_statement(parser_t * p_parser) {
+    stmt_t * p_stmt = memory_allocate(sizeof(stmt_t));
+    p_stmt->type = STMT_BLOCK;
+    p_stmt->as.block_stmt.count = memory_allocate(sizeof(size_t));
+    p_stmt->as.block_stmt.count[0] = 0;
+    dynamic_array_t * statements = create_array(8 * sizeof(stmt_t*));
+    while (!token_check(p_parser, RIGHT_BRACE) && !token_is_at_end(p_parser)) {
+        stmt_t * stmt = declaration(p_parser);
+        array_push(statements, &stmt, sizeof(stmt_t*));
+    }
+    consume(p_parser, RIGHT_BRACE, "Expected '}' after block.");
+
+    *p_stmt->as.block_stmt.count = statements->size / sizeof(stmt_t*);
+    p_stmt->as.block_stmt.statements = memory_allocate(statements->size);
+    memory_copy(p_stmt->as.block_stmt.statements, statements->data, statements->size);
+
+    array_free(statements);
+
+    return p_stmt;
 }

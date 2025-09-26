@@ -26,9 +26,10 @@ int main(void) {
     scanner_print_tokens(p_scanner);
     parser_t * p_parser = parser_init(scanner_get_tokens(p_scanner));
 
+    g_scope = init_global_scope();
     ast_evaluator_t * p_evaluator = ast_evaluator_init();
 
-    g_scope = init_global_scope();
+
 
     // TODO this should be a function that takes a list of statements as input
     while (parser_get_current_token_type(p_parser) != END_OF_FILE) {

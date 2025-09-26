@@ -19,6 +19,8 @@ struct ast_evaluator {
 
     expr_visitor_t expr_visitor;
     stmt_visitor_t stmt_visitor;
+
+    environment_t * current_env; // ?
 };
 // Externs TODO change this
 
@@ -37,6 +39,7 @@ static void * eval_unimpl_expr(const expr_t * expr, const expr_visitor_t * v, vo
 static void * visit_print_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx);
 static void * visit_expression_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx);
 static void * visit_variable_stmt(const stmt_t* stmt, const stmt_visitor_t* visitor, void* context);
+static void * visit_block_stmt(const stmt_t * stmt, const stmt_visitor_t* visitor, void* ctx);
 static void * eval_unimpl_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx);
 // Public API
 ast_evaluator_t * ast_evaluator_init(void) {
@@ -45,6 +48,7 @@ ast_evaluator_t * ast_evaluator_init(void) {
         fprintf(stderr, "Error: ast_evaluator_init recieved NULL pointer\n");
         exit(EXIT_FAILURE);
     }
+    p_evaluator->current_env = g_scope;
     // Initialize all visitor function pointers to unimplemented fallbacks
     p_evaluator->expr_visitor.visit_assign = eval_unimpl_expr;
     p_evaluator->expr_visitor.visit_binary = eval_unimpl_expr;
@@ -80,6 +84,7 @@ ast_evaluator_t * ast_evaluator_init(void) {
     p_evaluator->stmt_visitor.visit_print = visit_print_stmt;
     p_evaluator->stmt_visitor.visit_expression = visit_expression_stmt;
     p_evaluator->stmt_visitor.visit_var = visit_variable_stmt;
+    p_evaluator->stmt_visitor.visit_block = visit_block_stmt;
 
     return p_evaluator;
 }
@@ -247,15 +252,16 @@ static void * visit_grouping_expr(const expr_t* expr, const expr_visitor_t* visi
     return expr_accept(grouping_p->expression, visitor, context);
 }
 static void * visit_variable_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
+    const ast_evaluator_t * p_evaluator = context;
     const expr_variable_t * p_expr = &expr->as.variable_expr;
-    return env_lookup(g_scope, p_expr->name->lexeme);
+    return env_lookup(p_evaluator->current_env, p_expr->name->lexeme);
 }
 static void * visit_assignment_expr(const expr_t * expr, const expr_visitor_t * visitor, void * context) {
     const expr_assign_t * p_expr = &expr->as.assign_expr;
     ast_evaluator_t * p_evaluator = context;
 
     value_t * p_val = ast_evaluator_eval_expr(p_evaluator, p_expr->value);
-    assign_variable(g_scope, p_expr->name->lexeme, p_val);
+    assign_variable(p_evaluator->current_env, p_expr->name->lexeme, p_val);
     return p_val;
 }
 static void * eval_unimpl_expr(const expr_t * expr, const expr_visitor_t * v, void * ctx) {
@@ -268,7 +274,7 @@ static void * visit_variable_stmt(const stmt_t * stmt, const stmt_visitor_t * vi
     const ast_evaluator_t * evaluator = context;
     value_t * p_val = expr_accept(stmt->as.var_stmt.initializer, &evaluator->expr_visitor, context);
 
-    assign_variable(g_scope, stmt->as.var_stmt.name->lexeme, p_val);
+    assign_variable(evaluator->current_env, stmt->as.var_stmt.name->lexeme, p_val);
     memory_free((void**)&p_val);
     return NULL;
 }
@@ -302,6 +308,16 @@ static void * visit_print_stmt(const stmt_t * stmt, const stmt_visitor_t * v, vo
     if (stmt->as.print_stmt.expression->type != EXPR_VARIABLE) {
         memory_free((void**)&p_value);
     }
+    return NULL;
+}
+static void * visit_block_stmt(const stmt_t * stmt, const stmt_visitor_t* visitor, void* ctx) {
+    environment_t * p_new_env = create_environment(((ast_evaluator_t*)ctx)->current_env);
+    ((ast_evaluator_t*)ctx)->current_env = p_new_env;
+    for (size_t i = 0; i < *stmt->as.block_stmt.count; i++) {
+        ast_evaluator_eval_stmt(ctx, stmt->as.block_stmt.statements[i]);
+    }
+    ((ast_evaluator_t*)ctx)->current_env = get_parent_environment(p_new_env); // reset env context
+    free_environment(p_new_env);
     return NULL;
 }
 static void * eval_unimpl_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx) {
