@@ -25,8 +25,10 @@
 
     program         -> declaration* EOF ;
     declaration     -> varDecl | statement ;
-    statement       -> exprStmt | printStmt | block ;
+    statement       -> exprStmt | ifStmt | printStmt | block ;
     exprStmt        -> expression ";" ;
+    ifStmt          -> "if" "(" expression ")" statement
+                        ( "else" statement )? ;
     printStmt       -> "print" expression ";" ;
     varDecl         -> "var" IDENTIFIER ( "=" expression )? ";" ;
     block           -> "{" declaration* "}" ;
@@ -62,6 +64,7 @@ static expr_t* parse_primary(parser_t* parser);
 static stmt_t * statement(parser_t * p_parser);
 static stmt_t * declaration(parser_t * p_parser);
 static stmt_t * parse_block_statement(parser_t * p_parser);
+static stmt_t * parse_if_statement(parser_t * p_parser);
 // Public API
 const char* g_expr_type_names[] = {
     "EXPR_ASSIGN",
@@ -482,6 +485,9 @@ static stmt_t * declaration(parser_t * p_parser) {
     return statement(p_parser);
 }
 static stmt_t * statement(parser_t * p_parser) {
+    if (token_match(p_parser, 1, IF)) {
+        return parse_if_statement(p_parser);
+    }
     if (token_match(p_parser, 1, PRINT)) {
         return print_statement(p_parser);
     }
@@ -509,4 +515,22 @@ static stmt_t * parse_block_statement(parser_t * p_parser) {
     array_free(statements);
 
     return p_stmt;
+}
+static stmt_t * parse_if_statement(parser_t * p_parser) {
+    stmt_t * if_stmt = memory_allocate(sizeof(stmt_t));
+    if_stmt->type = STMT_IF;
+
+    consume(p_parser, LEFT_PAREN, "Expected '(' after 'if'.");
+    expr_t * condition = parse_expression(p_parser);
+    consume(p_parser, RIGHT_PAREN, "Expected ')' after if condition.");
+
+    stmt_t * then_branch = statement(p_parser);
+    stmt_t * else_branch = NULL;
+    if (token_match(p_parser, 1, ELSE)) {
+        else_branch = statement(p_parser);
+    }
+    if_stmt->as.if_stmt.condition = condition;
+    if_stmt->as.if_stmt.then_branch = then_branch;
+    if_stmt->as.if_stmt.else_branch = else_branch;
+    return if_stmt;
 }
