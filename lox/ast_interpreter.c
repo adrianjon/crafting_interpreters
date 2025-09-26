@@ -265,7 +265,7 @@ static void * visit_assignment_expr(const expr_t * expr, const expr_visitor_t * 
     return p_val;
 }
 static void * eval_unimpl_expr(const expr_t * expr, const expr_visitor_t * v, void * ctx) {
-    (void)expr; (void)v; (void)ctx;
+    (void)expr; (void)ctx;
     printf("Unimplemented expression: %s\n", g_expr_type_names[expr->type]);
     return NULL;
 }
@@ -321,7 +321,7 @@ static void * visit_block_stmt(const stmt_t * stmt, const stmt_visitor_t* visito
     return NULL;
 }
 static void * eval_unimpl_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx) {
-    (void)stmt; (void)v; (void)ctx;
+    (void)stmt; (void)ctx;
     printf("Unimplemented statement: %s\n", g_stmt_type_names[stmt->type]);
     return NULL;
 }
