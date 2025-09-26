@@ -274,7 +274,7 @@ static void * visit_variable_stmt(const stmt_t * stmt, const stmt_visitor_t * vi
     const ast_evaluator_t * evaluator = context;
     value_t * p_val = expr_accept(stmt->as.var_stmt.initializer, &evaluator->expr_visitor, context);
 
-    assign_variable(evaluator->current_env, stmt->as.var_stmt.name->lexeme, p_val);
+    declare_variable(evaluator->current_env, stmt->as.var_stmt.name->lexeme, p_val);
     memory_free((void**)&p_val);
     return NULL;
 }
