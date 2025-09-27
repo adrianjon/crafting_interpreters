@@ -25,10 +25,11 @@
 
     program         -> declaration* EOF ;
     declaration     -> varDecl | statement ;
-    statement       -> exprStmt | ifStmt | printStmt | block ;
+    statement       -> exprStmt | ifStmt | whileStmt | printStmt | block ;
     exprStmt        -> expression ";" ;
     ifStmt          -> "if" "(" expression ")" statement
                         ( "else" statement )? ;
+    whileStmt       -> "while" "(" expression ")" statement ;
     printStmt       -> "print" expression ";" ;
     varDecl         -> "var" IDENTIFIER ( "=" expression )? ";" ;
     block           -> "{" declaration* "}" ;
@@ -65,6 +66,7 @@ static stmt_t * statement(parser_t * p_parser);
 static stmt_t * declaration(parser_t * p_parser);
 static stmt_t * parse_block_statement(parser_t * p_parser);
 static stmt_t * parse_if_statement(parser_t * p_parser);
+static stmt_t * parse_while_statement(parser_t * p_parser);
 // Public API
 const char* g_expr_type_names[] = {
     "EXPR_ASSIGN",
@@ -216,6 +218,10 @@ void free_statement(stmt_t* stmt) {
             free_expression(stmt->as.expression_stmt.expression);
             break;
         case STMT_IF:
+            free_expression(stmt->as.if_stmt.condition);
+            free_statement(stmt->as.if_stmt.then_branch);
+            free_statement(stmt->as.if_stmt.else_branch);
+            break;
         case STMT_PRINT:
             free_expression(stmt->as.print_stmt.expression);
             break;
@@ -225,7 +231,8 @@ void free_statement(stmt_t* stmt) {
             memory_free((void**)&stmt->as.var_stmt.name);
             break;
         case STMT_WHILE:
-            // TODO implement this
+            free_expression(stmt->as.while_stmt.condition);
+            free_statement(stmt->as.while_stmt.body);
             break;
     }
     memory_free((void**)&stmt);
@@ -488,6 +495,9 @@ static stmt_t * statement(parser_t * p_parser) {
     if (token_match(p_parser, 1, IF)) {
         return parse_if_statement(p_parser);
     }
+    if (token_match(p_parser, 1, WHILE)) {
+        return parse_while_statement(p_parser);
+    }
     if (token_match(p_parser, 1, PRINT)) {
         return print_statement(p_parser);
     }
@@ -533,4 +543,19 @@ static stmt_t * parse_if_statement(parser_t * p_parser) {
     if_stmt->as.if_stmt.then_branch = then_branch;
     if_stmt->as.if_stmt.else_branch = else_branch;
     return if_stmt;
+}
+static stmt_t * parse_while_statement(parser_t * p_parser) {
+    stmt_t * while_stmt = memory_allocate(sizeof(stmt_t));
+    while_stmt->type = STMT_WHILE;
+
+    consume(p_parser, LEFT_PAREN, "Expected '(' after 'while'.");
+    expr_t * condition = parse_expression(p_parser);
+    consume(p_parser, RIGHT_PAREN, "Expected ')' after while condition.");
+
+    stmt_t * body = statement(p_parser);
+
+    while_stmt->as.while_stmt.condition = condition;
+    while_stmt->as.while_stmt.body = body;
+
+    return while_stmt;
 }

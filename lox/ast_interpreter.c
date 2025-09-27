@@ -20,7 +20,7 @@ struct ast_evaluator {
     expr_visitor_t expr_visitor;
     stmt_visitor_t stmt_visitor;
 
-    environment_t * current_env; // ?
+    environment_t * current_env;
 };
 // Externs TODO change this
 
@@ -40,6 +40,8 @@ static void * visit_print_stmt(const stmt_t * stmt, const stmt_visitor_t * v, vo
 static void * visit_expression_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx);
 static void * visit_variable_stmt(const stmt_t* stmt, const stmt_visitor_t* visitor, void* context);
 static void * visit_block_stmt(const stmt_t * stmt, const stmt_visitor_t* visitor, void* ctx);
+static void * visit_if_stmt(const stmt_t * p_stmt, const stmt_visitor_t * p_visitor, void * p_ctx);
+static void * visit_while_stmt(const stmt_t * p_stmt, const stmt_visitor_t * p_visitor, void * p_ctx);
 static void * eval_unimpl_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx);
 // Public API
 ast_evaluator_t * ast_evaluator_init(void) {
@@ -50,30 +52,22 @@ ast_evaluator_t * ast_evaluator_init(void) {
     }
     p_evaluator->current_env = g_scope;
     // Initialize all visitor function pointers to unimplemented fallbacks
-    p_evaluator->expr_visitor.visit_assign = eval_unimpl_expr;
-    p_evaluator->expr_visitor.visit_binary = eval_unimpl_expr;
+
+    // Unimplemented visitor functions
     p_evaluator->expr_visitor.visit_call = eval_unimpl_expr;
     p_evaluator->expr_visitor.visit_get = eval_unimpl_expr;
-    p_evaluator->expr_visitor.visit_grouping = eval_unimpl_expr;
-    p_evaluator->expr_visitor.visit_literal = eval_unimpl_expr;
     p_evaluator->expr_visitor.visit_logical = eval_unimpl_expr;
     p_evaluator->expr_visitor.visit_set = eval_unimpl_expr;
     p_evaluator->expr_visitor.visit_super = eval_unimpl_expr;
     p_evaluator->expr_visitor.visit_this = eval_unimpl_expr;
-    p_evaluator->expr_visitor.visit_unary = eval_unimpl_expr;
-    p_evaluator->expr_visitor.visit_variable = eval_unimpl_expr;
 
-    p_evaluator->stmt_visitor.visit_block = eval_unimpl_stmt;
     p_evaluator->stmt_visitor.visit_function = eval_unimpl_stmt;
     p_evaluator->stmt_visitor.visit_class = eval_unimpl_stmt;
-    p_evaluator->stmt_visitor.visit_expression = eval_unimpl_stmt;
     p_evaluator->stmt_visitor.visit_if = eval_unimpl_stmt;
-    p_evaluator->stmt_visitor.visit_print = eval_unimpl_stmt;
     p_evaluator->stmt_visitor.visit_return = eval_unimpl_stmt;
-    p_evaluator->stmt_visitor.visit_var = eval_unimpl_stmt;
-    p_evaluator->stmt_visitor.visit_while = eval_unimpl_stmt;
 
 
+    // Implemented visitor functions
     p_evaluator->expr_visitor.visit_binary = visit_binary_expr;
     p_evaluator->expr_visitor.visit_literal = visit_literal_expr;
     p_evaluator->expr_visitor.visit_unary = visit_unary_expr;
@@ -85,6 +79,9 @@ ast_evaluator_t * ast_evaluator_init(void) {
     p_evaluator->stmt_visitor.visit_expression = visit_expression_stmt;
     p_evaluator->stmt_visitor.visit_var = visit_variable_stmt;
     p_evaluator->stmt_visitor.visit_block = visit_block_stmt;
+    p_evaluator->stmt_visitor.visit_if = visit_if_stmt;
+    p_evaluator->stmt_visitor.visit_while = visit_while_stmt;
+
 
     return p_evaluator;
 }
@@ -128,6 +125,11 @@ static bool value_equals(const value_t * a, const value_t * b) {
         case VAL_NIL: return true;
         default: return false;
     }
+}
+static bool value_less(const value_t * a, const value_t * b) {
+    if (a->type != b->type) return false;
+    if (a->type != VAL_NUMBER) return false;
+    return a->as.number < b->as.number;
 }
 static void * visit_literal_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
     (void)visitor, (void)context;
@@ -239,6 +241,10 @@ static void * visit_binary_expr(const expr_t* expr, const expr_visitor_t* visito
             result->type = VAL_BOOL;
             result->as.boolean = value_equals(left, right);
             break;
+        case LESS:
+            result->type = VAL_BOOL;
+            result->as.boolean = value_less(left, right);
+            break;
         default:
             result->type = VAL_NIL;
             break;
@@ -318,6 +324,37 @@ static void * visit_block_stmt(const stmt_t * stmt, const stmt_visitor_t* visito
     }
     ((ast_evaluator_t*)ctx)->current_env = get_parent_environment(p_new_env); // reset env context
     free_environment(p_new_env);
+    return NULL;
+}
+static void * visit_if_stmt(const stmt_t * p_stmt, const stmt_visitor_t * p_visitor, void * p_ctx) {
+    const stmt_if_t * p_if_stmt = &p_stmt->as.if_stmt;
+
+    value_t * condition_value = ast_evaluator_eval_expr(p_ctx, p_if_stmt->condition);
+
+    if (value_is_truthy(condition_value)) {
+        ast_evaluator_eval_stmt(p_ctx, p_if_stmt->then_branch);
+    } else if (p_if_stmt->else_branch) {
+        ast_evaluator_eval_stmt(p_ctx, p_if_stmt->else_branch);
+    } else {
+        fprintf(stderr, "Error evaluating if statement.\n");
+    }
+    value_free(condition_value);
+
+    return NULL;
+}
+static void * visit_while_stmt(const stmt_t * p_stmt, const stmt_visitor_t * p_visitor, void * p_ctx) {
+    const stmt_while_t * p_while_stmt = &p_stmt->as.while_stmt;
+
+    while (true) {
+        value_t * cond_val = ast_evaluator_eval_expr(p_ctx, p_while_stmt->condition);
+        if (!value_is_truthy(cond_val)) {
+            value_free(cond_val);
+            break;
+        }
+        value_free(cond_val);
+        ast_evaluator_eval_stmt(p_ctx, p_while_stmt->body);
+        // TODO handle break/continue
+    }
     return NULL;
 }
 static void * eval_unimpl_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx) {
