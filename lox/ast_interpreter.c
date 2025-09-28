@@ -297,15 +297,16 @@ static void * visit_logical_expr(const expr_t * expr, const expr_visitor_t * vis
     const expr_logical_t * p_expr = &expr->as.logical_expr;
     value_t * left = expr_accept(p_expr->left, visitor, context);
 
-    value_t * result = memory_allocate(sizeof(value_t));
-    result->is_on_heap = true;
-    result->type = VAL_BOOL;
+    // value_t * result = memory_allocate(sizeof(value_t));
+    // result->is_on_heap = true;
+    // result->type = VAL_BOOL;
 
     if (p_expr->operator->type == OR) {
         if (value_is_truthy(left)) return left;
     } else if (p_expr->operator->type == AND) {
         if (!value_is_truthy(left)) return left;
     }
+    value_free(left);
     return expr_accept(p_expr->right, visitor, context);
 }
 static void * eval_unimpl_expr(const expr_t * expr, const expr_visitor_t * v, void * ctx) {
