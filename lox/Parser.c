@@ -13,7 +13,9 @@
 #include "Stmt.h"
 /* new grammar
     expression     → assignment ;
-    assignment     → IDENTIFIER "=" assignment | equality ;
+    assignment     → IDENTIFIER "=" assignment | logic_or ;
+    logic_or       → logic_and ( "or" logic_and )* ;
+    logic_and      → equality ( "and" equality )* ;
     equality       → comparison ( ( "!=" | "==" ) comparison )* ;
     comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
     term           → factor ( ( "-" | "+" ) factor )* ;
@@ -55,6 +57,8 @@ static token_t token_previous(const parser_t* parser);
 static token_t* token_previous_ptr(const parser_t* parser);
 static expr_t* parse_expression(parser_t* parser);
 static expr_t * parse_assignment(parser_t * p_parser);
+static expr_t * parse_logical_or(parser_t * p_parser);
+static expr_t * parse_logical_and(parser_t * p_parser);
 static expr_t* parse_equality(parser_t* parser);
 static expr_t* parse_comparison(parser_t* parser);
 static expr_t* parse_term(parser_t* parser);
@@ -134,13 +138,14 @@ void parser_free(parser_t * p_parser) {
     p_parser = NULL;
 }
 // token_t* should point to tokens in the shared parser token buffer. Should NOT be freed here
-void free_expression(expr_t* expr) {
+void free_expression(expr_t * expr) {
     if (!expr) return;
 
     switch (expr->type) {
         case EXPR_ASSIGN:
+            //memory_free((void**)&expr->as.assign_expr.name);
+            free_expression(expr->as.assign_expr.target);
             free_expression(expr->as.assign_expr.value);
-            memory_free((void**)&expr->as.assign_expr.name);
             break;
         case EXPR_BINARY:
             free_expression(expr->as.binary_expr.left);
@@ -170,6 +175,7 @@ void free_expression(expr_t* expr) {
             break;
         case EXPR_LOGICAL:
             free_expression(expr->as.logical_expr.left);
+            memory_free((void**)&expr->as.logical_expr.operator);
             free_expression(expr->as.logical_expr.right);
             break;
         case EXPR_SET:
@@ -184,6 +190,7 @@ void free_expression(expr_t* expr) {
             free_expression(expr->as.unary_expr.right);
             break;
         case EXPR_VARIABLE:
+
             memory_free((void**)&expr->as.variable_expr.name);
             break;
         default:
@@ -244,28 +251,60 @@ static expr_t* parse_expression(parser_t* parser) {
 }
 static expr_t * parse_assignment(parser_t * p_parser) {
     //      assignment     → IDENTIFIER "=" assignment | equality ;
-    expr_t * p_expr = parse_equality(p_parser);
+    expr_t * p_expr = parse_logical_or(p_parser);
     if (token_match(p_parser, 1, EQUAL)) {
-        token_t * equals = memory_allocate(sizeof(token_t));
-        if (!memory_copy(equals, token_previous_ptr(p_parser), sizeof(token_t))) {
-            printf("memory copy failed\n");
-            exit(EXIT_FAILURE);
-        }
-        memory_free((void**)&equals); // why do I even copy?
+
         expr_t * value = parse_assignment(p_parser);
         if (p_expr->type == EXPR_VARIABLE) {
-            token_t * name = memory_allocate(sizeof(token_t));
-            if (!memory_copy(name, p_expr->as.variable_expr.name, sizeof(token_t))) {
-                printf("memory copy failed\n");
-                exit(EXIT_FAILURE);
-            }
-            const expr_assign_t assign_expr = { .name = name, .value = value};
             expr_t * new_expr = memory_allocate(sizeof(expr_t));
             new_expr->type = EXPR_ASSIGN;
-            new_expr->as.assign_expr = assign_expr;
+            new_expr->as.assign_expr.target = p_expr;
+            new_expr->as.assign_expr.value = value;
             return new_expr;
         }
-        printf("Error, invalid assignment target\n");
+        fprintf(stderr, "ParserError: Invalid assignment target.\n");
+    }
+    return p_expr;
+}
+static expr_t * parse_logical_or(parser_t * p_parser) {
+//    logic_or       → logic_and ( "or" logic_and )* ;
+    expr_t * p_expr = parse_logical_and(p_parser);
+
+    while (token_match(p_parser, 1, OR)) {
+        token_t * operator = memory_allocate(sizeof(token_t));
+        if (!memory_copy(operator, token_previous_ptr(p_parser), sizeof(token_t))) {
+            fprintf(stderr, "ParserError: Memory copy failed\n");
+            exit(EXIT_FAILURE);
+        }
+        expr_t * right = parse_logical_and(p_parser);
+        expr_t * new_expr = memory_allocate(sizeof(expr_t));
+        new_expr->type = EXPR_LOGICAL;
+        new_expr->as.logical_expr.left = p_expr;
+        new_expr->as.logical_expr.operator = operator;
+        new_expr->as.logical_expr.right = right;
+
+        p_expr = new_expr;
+    }
+    return p_expr;
+}
+static expr_t * parse_logical_and(parser_t * p_parser) {
+//    logic_and      → equality ( "and" equality )* ;
+    expr_t * p_expr = parse_equality(p_parser);
+
+    while (token_match(p_parser, 1, AND)) {
+        token_t * operator = memory_allocate(sizeof(token_t));
+        if (!memory_copy(operator, token_previous_ptr(p_parser), sizeof(token_t))) {
+            fprintf(stderr, "ParserError: Memory copy failed\n");
+            exit(EXIT_FAILURE);
+        }
+        expr_t * right = parse_equality(p_parser);
+        expr_t * new_expr = memory_allocate(sizeof(expr_t));
+        new_expr->type = EXPR_LOGICAL;
+        new_expr->as.logical_expr.left = p_expr;
+        new_expr->as.logical_expr.operator = operator;
+        new_expr->as.logical_expr.right = right;
+
+        p_expr = new_expr;
     }
     return p_expr;
 }
@@ -275,7 +314,7 @@ static expr_t* parse_equality(parser_t* parser) {
     while (token_match(parser, 2, BANG_EQUAL, EQUAL_EQUAL)) {
         token_t * operator = memory_allocate(sizeof(token_t));
         if (!memory_copy(operator, token_previous_ptr(parser), sizeof(token_t))) {
-            printf("memory copy failed\n");
+            fprintf(stderr, "ParserError: Memory copy failed\n");
             exit(EXIT_FAILURE);
         }
         expr_t* right = parse_comparison(parser);
@@ -293,7 +332,7 @@ static expr_t* parse_comparison(parser_t* parser) {
     while (token_match(parser, 4, LESS, LESS_EQUAL, GREATER, GREATER_EQUAL)) {
         token_t * operator = memory_allocate(sizeof(token_t));
         if (!memory_copy(operator, token_previous_ptr(parser), sizeof(token_t))) {
-            printf("memory copy failed\n");
+            fprintf(stderr, "ParserError: Memory copy failed\n");
             exit(EXIT_FAILURE);
         }
         expr_t* right = parse_term(parser);
@@ -311,7 +350,7 @@ static expr_t* parse_term(parser_t* parser) {
     while (token_match(parser, 2, MINUS, PLUS)) {
         token_t * operator = memory_allocate(sizeof(token_t));
         if (!memory_copy(operator, token_previous_ptr(parser), sizeof(token_t))) {
-            printf("memory copy failed\n");
+            fprintf(stderr, "ParserError: Memory copy failed\n");
             exit(EXIT_FAILURE);
         }
         expr_t* right = parse_factor(parser);
@@ -324,12 +363,12 @@ static expr_t* parse_term(parser_t* parser) {
     return expr;
 }
 static expr_t* parse_factor(parser_t* parser) {
-    // factor         → unary ( ( "/" | "*" ) unary )* ;
+    // factor         → unary ( ( "/" | "*" | "%" ) unary )* ;
     expr_t* expr = parse_unary(parser);
-    while (token_match(parser, 2, SLASH, STAR)) {
+    while (token_match(parser, 3, SLASH, STAR, PERCENTAGE)) {
         token_t * operator = memory_allocate(sizeof(token_t));
         if (!memory_copy(operator, token_previous_ptr(parser), sizeof(token_t))) {
-            printf("memory copy failed\n");
+            fprintf(stderr, "ParserError: Memory copy failed\n");
             exit(EXIT_FAILURE);
         }
         expr_t* right = parse_unary(parser);
@@ -364,7 +403,7 @@ static expr_t* parse_primary(parser_t* parser) {
         expr->type = EXPR_LITERAL;
         expr->as.literal_expr.kind = memory_allocate(sizeof(token_t));
         if (!memory_copy(expr->as.literal_expr.kind, number_token, sizeof(token_t))) {
-            printf("memory copy failed\n");
+            fprintf(stderr, "ParserError: Memory copy failed\n");
         }
         return expr;
     }
@@ -373,7 +412,7 @@ static expr_t* parse_primary(parser_t* parser) {
         expr->type = EXPR_VARIABLE;
         expr->as.variable_expr.name = memory_allocate(sizeof(token_t));
         if (!memory_copy(expr->as.variable_expr.name, token_previous_ptr(parser), sizeof(token_t))) {
-            printf("error memory_copy\n");
+            fprintf(stderr, "ParserError: Memory copy failed\n");
             exit(EXIT_FAILURE);
         }
         return expr;
@@ -383,8 +422,8 @@ static expr_t* parse_primary(parser_t* parser) {
         if (!token_match(parser, 1, RIGHT_PAREN)) {
             // Error: expected ')'
             token_t * test = (token_t*)parser->tokens->data + parser->current - 1;
-            printf("Error: token: %s\tline:%d\n", test->lexeme, test->line);
-            printf("Error: Expected ')' after expression.\n");
+            fprintf(stderr, "ParserError: Token: %s\tline:%d\n", test->lexeme, test->line);
+            fprintf(stderr, "ParserError: Expected ')' after expression.\n");
             g_error_flag = true;
             return NULL;
         }
@@ -394,7 +433,7 @@ static expr_t* parse_primary(parser_t* parser) {
         return group;
     }
     // If none matched, error
-    printf("Error: Expected expression.\n");
+    fprintf(stderr, "ParserError: Expected expression.\n");
     // TODO fix some other way
     g_error_flag = true; // sets global error flag
     return NULL;
@@ -444,7 +483,7 @@ static token_t consume(parser_t * p_parser, token_type_t type, const char * mess
     if (token_check(p_parser, type)) {
         return token_advance(p_parser);
     }
-    fprintf(stderr, "%s\n", message);
+    fprintf(stderr, "ParserError: %s\n", message);
     exit(EXIT_FAILURE);
 }
 static stmt_t * print_statement(parser_t * p_parser) {
@@ -480,7 +519,7 @@ static stmt_t * var_declaration(parser_t * p_parser) {
     var_decl_stmt->as.var_stmt.initializer = initializer;
     var_decl_stmt->as.var_stmt.name = memory_allocate(sizeof(token_t));
     if (!memory_copy(var_decl_stmt->as.var_stmt.name, &token, sizeof(token_t))) {
-        printf("error memory_copy\n");
+        fprintf(stderr, "ParserError: Memory copy failed\n");
         exit(EXIT_FAILURE);
     }
     return var_decl_stmt;

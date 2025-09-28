@@ -76,6 +76,8 @@ void scanner_scan(scanner_t * p_scanner) {
                 break;
             case '*': add_token(STAR, "*", scanner_get_line(p_scanner), p_scanner->tokens);
                 break;
+            case '%': add_token(PERCENTAGE, "%", scanner_get_line(p_scanner), p_scanner->tokens);
+                break;
             case '!':
                 is_equal = match(p_scanner, '=', scanner_peek(p_scanner));
                 add_token(is_equal ? BANG_EQUAL : BANG, is_equal ? "!=" : "!", scanner_get_line(p_scanner), p_scanner->tokens);

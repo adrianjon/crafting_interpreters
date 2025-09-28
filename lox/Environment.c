@@ -113,6 +113,9 @@ void assign_variable(environment_t * p_env, const char * p_name, const value_t *
         if (x->type == VAL_STRING) {
             memory_free((void**)&x->as.string);
         }
+        // free old value TODO fix bug here
+        // memory_free((void**)&x);
+
         if (p_val->type == VAL_STRING) {
             x->type = VAL_STRING;
             x->as.string = memory_allocate(strlen(p_val->as.string) + 1);

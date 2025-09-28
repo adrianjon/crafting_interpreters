@@ -19,6 +19,7 @@ typedef enum
     PLUS,
     MINUS,
     STAR,
+    PERCENTAGE,
     BANG,
     BANG_EQUAL,
     EQUAL,
@@ -55,7 +56,7 @@ extern const char* g_token_type_names[];
 typedef struct {
     token_type_t type;
     char lexeme[TOKEN_LEXEME_MAX]; // max lexeme length
-    int line;
+    int line; // TODO make this size_t
 } token_t;
 
 #endif //LOX_TOKEN_H

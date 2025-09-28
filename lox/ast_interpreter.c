@@ -3,6 +3,7 @@
 //
 #include "ast_interpreter.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <windows.h>
@@ -35,6 +36,7 @@ static void* visit_binary_expr(const expr_t* expr, const expr_visitor_t* visitor
 static void* visit_grouping_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context);
 static void * visit_variable_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context);
 static void * visit_assignment_expr(const expr_t * expr, const expr_visitor_t * visitor, void * context);
+static void * visit_logical_expr(const expr_t * expr, const expr_visitor_t * visitor, void * context);
 static void * eval_unimpl_expr(const expr_t * expr, const expr_visitor_t * v, void * ctx);
 static void * visit_print_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx);
 static void * visit_expression_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx);
@@ -56,7 +58,7 @@ ast_evaluator_t * ast_evaluator_init(void) {
     // Unimplemented visitor functions
     p_evaluator->expr_visitor.visit_call = eval_unimpl_expr;
     p_evaluator->expr_visitor.visit_get = eval_unimpl_expr;
-    p_evaluator->expr_visitor.visit_logical = eval_unimpl_expr;
+
     p_evaluator->expr_visitor.visit_set = eval_unimpl_expr;
     p_evaluator->expr_visitor.visit_super = eval_unimpl_expr;
     p_evaluator->expr_visitor.visit_this = eval_unimpl_expr;
@@ -74,6 +76,7 @@ ast_evaluator_t * ast_evaluator_init(void) {
     p_evaluator->expr_visitor.visit_grouping = visit_grouping_expr;
     p_evaluator->expr_visitor.visit_variable = visit_variable_expr;
     p_evaluator->expr_visitor.visit_assign = visit_assignment_expr;
+    p_evaluator->expr_visitor.visit_logical = visit_logical_expr;
 
     p_evaluator->stmt_visitor.visit_print = visit_print_stmt;
     p_evaluator->stmt_visitor.visit_expression = visit_expression_stmt;
@@ -230,16 +233,34 @@ static void * visit_binary_expr(const expr_t* expr, const expr_visitor_t* visito
             }
             break;
         case SLASH:
+            // should check for division by zero
             if (left->type == VAL_NUMBER && right->type == VAL_NUMBER) {
                 result->type = VAL_NUMBER;
+                if (right->as.number == 0) {
+                    fprintf(stderr, "Divide by zero");
+                }
                 result->as.number = left->as.number / right->as.number;
             } else {
                 result->type = VAL_NIL;
             }
             break;
+        case PERCENTAGE:
+            // should check for division by zero
+            if (left->type == VAL_NUMBER && right->type == VAL_NUMBER) {
+                result->type = VAL_NUMBER;
+                if (right->as.number == 0) {
+                    fprintf(stderr, "Divide by zero");
+                }
+                result->as.number = (double)((int64_t)left->as.number % (int64_t)right->as.number);
+            }
+            break;
         case EQUAL_EQUAL:
             result->type = VAL_BOOL;
             result->as.boolean = value_equals(left, right);
+            break;
+        case BANG_EQUAL:
+            result->type = VAL_BOOL;
+            result->as.boolean = !value_equals(left, right);
             break;
         case LESS:
             result->type = VAL_BOOL;
@@ -267,8 +288,25 @@ static void * visit_assignment_expr(const expr_t * expr, const expr_visitor_t * 
     ast_evaluator_t * p_evaluator = context;
 
     value_t * p_val = ast_evaluator_eval_expr(p_evaluator, p_expr->value);
-    assign_variable(p_evaluator->current_env, p_expr->name->lexeme, p_val);
+    p_val->is_on_heap = false;
+    // here we are assuming we are assigning to a variable (if we want to support assigning to fields)
+    assign_variable(p_evaluator->current_env, p_expr->target->as.variable_expr.name->lexeme, p_val);
     return p_val;
+}
+static void * visit_logical_expr(const expr_t * expr, const expr_visitor_t * visitor, void * context) {
+    const expr_logical_t * p_expr = &expr->as.logical_expr;
+    value_t * left = expr_accept(p_expr->left, visitor, context);
+
+    value_t * result = memory_allocate(sizeof(value_t));
+    result->is_on_heap = true;
+    result->type = VAL_BOOL;
+
+    if (p_expr->operator->type == OR) {
+        if (value_is_truthy(left)) return left;
+    } else if (p_expr->operator->type == AND) {
+        if (!value_is_truthy(left)) return left;
+    }
+    return expr_accept(p_expr->right, visitor, context);
 }
 static void * eval_unimpl_expr(const expr_t * expr, const expr_visitor_t * v, void * ctx) {
     (void)expr; (void)ctx;
@@ -335,8 +373,6 @@ static void * visit_if_stmt(const stmt_t * p_stmt, const stmt_visitor_t * p_visi
         ast_evaluator_eval_stmt(p_ctx, p_if_stmt->then_branch);
     } else if (p_if_stmt->else_branch) {
         ast_evaluator_eval_stmt(p_ctx, p_if_stmt->else_branch);
-    } else {
-        fprintf(stderr, "Error evaluating if statement.\n");
     }
     value_free(condition_value);
 

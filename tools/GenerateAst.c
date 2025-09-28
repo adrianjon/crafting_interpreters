@@ -15,7 +15,7 @@
 // };
 static const char* ast_expr_grammar[] = {
 //> Statements and State assign-expr
-      "assign   : token_t* name, expr_t* value",
+      "assign   : expr_t* target, expr_t* value",
 //< Statements and State assign-expr
       "binary   : expr_t* left, token_t* operator, expr_t* right",
 //> Functions call-expr
