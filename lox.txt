@@ -1,3 +1,14 @@
+//print "hello"
+//var x = 2
+
+
+//add(2, 3, 4);
+print x;
+/*
+fun add(a, b) {
+    return a + b;
+}
+
 var x = 0;
 while (x < 5) {
     if (x % 2 == 0 or true) {
@@ -5,3 +16,4 @@ while (x < 5) {
     }
     x = x + 1;
 }
+*/

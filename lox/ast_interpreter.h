@@ -13,17 +13,20 @@ typedef enum {
     VAL_NUMBER,
     VAL_STRING,
     VAL_BOOL,
+    VAL_FUNCTION,
     VAL_NIL,
 } value_type_t;
-typedef struct {
+typedef struct value value_t;
+struct value {
     value_type_t type;
     union {
         double number;
         char* string;
         bool boolean;
+        value_t (*function)(int argc, value_t * args);
     } as;
     bool is_on_heap;
-} value_t;
+};
 typedef struct ast_evaluator ast_evaluator_t;
 
 // new API

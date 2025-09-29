@@ -309,6 +309,43 @@ static void * visit_logical_expr(const expr_t * expr, const expr_visitor_t * vis
     value_free(left);
     return expr_accept(p_expr->right, visitor, context);
 }
+static value_t * call_function(char * function, dynamic_array_t * args, size_t num_args, ast_evaluator_t * p_evaluator) {
+    // TODO create new environment, bind params,
+    // TODO evaluate body, handle return, restore environment
+    environment_t * p_new_env = create_environment(p_evaluator->current_env);
+    p_evaluator->current_env = p_new_env;
+    // args contains the evaluated values that should be mapped to the arguments of the function
+    // we need to lookup the function name and get its params, then allocate the argument values to
+    // the param names
+    // e.g. add(2, 3) -> add(a, b) should do a = 2 and b = 3
+
+
+    return NULL;
+}
+static void * visit_call_expr(const expr_t * p_expr, const expr_visitor_t * p_visitor, void * p_ctx) {
+    value_t * callee = expr_accept(p_expr->as.call_expr.callee, p_visitor, p_ctx);
+
+    // evaluate arguments
+    dynamic_array_t * args_array = p_expr->as.call_expr.arguments;
+    size_t num_args = args_array->size / sizeof(expr_t*);
+    expr_t ** args = args_array->data;
+    dynamic_array_t * evaluated_args = create_array(sizeof(value_t*));
+    for (size_t i = 0; i < num_args; i++) {
+        expr_t * arg = expr_accept(args[i], p_visitor, p_ctx);
+        array_push(evaluated_args, &arg, sizeof(value_t*));
+    }
+
+    if (callee->type != VAL_FUNCTION) {
+        fprintf(stderr, "Runtime Error: Attempt to call non-function.\n");
+    }
+
+    // TODO calle->as.function
+    value_t * result = call_function(callee->as.string, evaluated_args, num_args, p_ctx);
+
+    // free args
+
+    return result;
+}
 static void * eval_unimpl_expr(const expr_t * expr, const expr_visitor_t * v, void * ctx) {
     (void)expr; (void)ctx;
     printf("Unimplemented expression: %s\n", g_expr_type_names[expr->type]);
@@ -330,7 +367,9 @@ static void * visit_expression_stmt(const stmt_t * stmt, const stmt_visitor_t * 
     return NULL;
 }
 const char * stringify(const value_t * p_value) {
-    if (!p_value) return "stringify_error";
+    if (!p_value) {
+        return NULL;
+    }
     static char num_buffer[32]; // static buffer for numbers (not thread-safe) TODO better method
     switch (p_value->type) {
         case VAL_STRING:
@@ -343,13 +382,19 @@ const char * stringify(const value_t * p_value) {
         case VAL_NIL:
             return "nil";
         default:
-            return "stringify_error";
+            return NULL;
     }
 }
 static void * visit_print_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx) {
     const ast_evaluator_t * evaluator = ctx;
     const value_t * p_value = expr_accept(stmt->as.print_stmt.expression, &evaluator->expr_visitor, ctx);
-    printf("%s\n", stringify(p_value));
+
+    const char * str = stringify(p_value);
+    if (!str) {
+        fprintf(stderr, "Runtime Error: value_t * is null.\n");
+        exit(EXIT_FAILURE);
+    }
+    printf("%s\n", str);
     if (stmt->as.print_stmt.expression->type != EXPR_VARIABLE) {
         memory_free((void**)&p_value);
     }

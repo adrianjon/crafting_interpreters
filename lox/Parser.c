@@ -21,7 +21,9 @@
     term           → factor ( ( "-" | "+" ) factor )* ;
     factor         → unary ( ( "/" | "*" ) unary )* ;
     unary          → ( "!" | "-" ) unary
-                   | primary ;
+                   | call ;
+    call           → primary ( "(" arguments? ")" ) ;
+    arguments      → expression ( "," expression )* ;
     primary        → NUMBER | STRING | "true" | "false" | "nil"
                    | "(" expression ")" | IDENTIFIER ;
 
@@ -55,6 +57,10 @@ static bool token_check(const parser_t* parser, token_type_t expected);
 static bool token_is_at_end(const parser_t* parser);
 static token_t token_previous(const parser_t* parser);
 static token_t* token_previous_ptr(const parser_t* parser);
+
+static token_t consume(parser_t * p_parser, token_type_t type, const char * message);
+static expr_t * finish_call(parser_t * p_parser, expr_t * callee);
+
 static expr_t* parse_expression(parser_t* parser);
 static expr_t * parse_assignment(parser_t * p_parser);
 static expr_t * parse_logical_or(parser_t * p_parser);
@@ -64,6 +70,7 @@ static expr_t* parse_comparison(parser_t* parser);
 static expr_t* parse_term(parser_t* parser);
 static expr_t* parse_factor(parser_t* parser);
 static expr_t* parse_unary(parser_t* parser);
+static expr_t * parse_call(parser_t * p_parser);
 static expr_t* parse_primary(parser_t* parser);
 
 static stmt_t * statement(parser_t * p_parser);
@@ -155,11 +162,14 @@ void free_expression(expr_t * expr) {
         case EXPR_CALL:
             // call expression
             free_expression(expr->as.call_expr.callee);
+            memory_free((void**)&expr->as.call_expr.paren);
             // assuming argument dynamic array consists of expressions
-            const size_t number_of_arguments = expr->as.call_expr.arguments->size / sizeof(expr_call_t);
+            const size_t number_of_arguments = expr->as.call_expr.arguments->size / sizeof(expr_t*);
+            expr_t ** args = expr->as.call_expr.arguments->data;
             for (size_t i = 0; i < number_of_arguments; i++) {
-                free_expression((expr_t*)expr->as.call_expr.arguments->data + i);
+                free_expression(args[i]);
             }
+            array_free(expr->as.call_expr.arguments);
             break;
         case EXPR_GET:
             free_expression(expr->as.get_expr.object);
@@ -392,7 +402,38 @@ static expr_t* parse_unary(parser_t* parser) {
         new_expr->as.unary_expr = unary_expr;
         return new_expr;
     }
-    return parse_primary(parser);
+    return parse_call(parser);
+}
+// function calling helping function
+static expr_t * finish_call(parser_t * p_parser, expr_t * callee) {
+    dynamic_array_t * arguments = create_array(sizeof(expr_t));
+    if (!token_check(p_parser, RIGHT_PAREN)) {
+        do {
+            expr_t * arg = parse_expression(p_parser);
+            array_push(arguments, &arg, sizeof(expr_t*));
+        } while (token_match(p_parser, 1, COMMA));
+    }
+    const token_t token = consume(p_parser, RIGHT_PAREN, "Expect ')' after arguments.");
+    token_t * p_token = memory_allocate(sizeof(token_t));
+    if (!memory_copy(p_token, &token, sizeof(token_t))) {
+        fprintf(stderr, "ParserError: Memory copy failed\n");
+        exit(EXIT_FAILURE);
+    }
+    expr_t * expr = memory_allocate(sizeof(expr_t));
+    expr->type = EXPR_CALL;
+    expr->as.call_expr.callee = callee;
+    expr->as.call_expr.paren = p_token;
+    expr->as.call_expr.arguments = arguments;
+    return expr;
+}
+static expr_t * parse_call(parser_t * p_parser) {
+    // call           → primary ( "(" arguments? ")" ) ;
+    expr_t * expr = parse_primary(p_parser);
+
+    if (token_match(p_parser, 1, LEFT_PAREN)) {
+        expr = finish_call(p_parser, expr);
+    }
+    return expr;
 }
 static expr_t* parse_primary(parser_t* parser) {
     // primary        → NUMBER | STRING | "true" | "false" | "nil"

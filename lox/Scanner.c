@@ -285,8 +285,21 @@ static bool is_alpha(const char c) {
 static bool is_alphanumeric(const char c) {
     return is_alpha(c) || is_digit(c);
 }
+// static token_type_t check_keyword(const scanner_t * p_scanner, const int start, const int length, const char * rest, const token_type_t type) {
+//     if (p_scanner->p_current - p_scanner->p_start == start + length && memory_compare(p_scanner->p_start + start, rest, length) == 0) {
+//         return type;
+//     }
+//     return IDENTIFIER;
+// }
+// static token_type_t identifier_type(scanner_t * p_scanner) {
+//     switch (p_scanner->p_start[0]) {
+//         case 'f': return check_keyword(p_scanner, 1, 2, "un", FUN);
+//         default: return IDENTIFIER;
+//     }
+// }
 static void identifier(scanner_t * p_scanner) {
     while (is_alphanumeric(scanner_peek(p_scanner))) scanner_advance(p_scanner);
+    //return make_token(identifier_type(p_scanner));
 }
 static token_type_t get_keyword_type(const char * identifier) {
     if (memory_compare(identifier, "if", 2)) return IF;

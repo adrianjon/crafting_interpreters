@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 // static struct {
 //     char * name;
@@ -72,8 +73,8 @@
 // Private functions
 
 
-
-
+// Forward declarations
+value_t lox_clock(int argc, value_t * args);
 
 
 
@@ -217,6 +218,19 @@ environment_t * create_environment(environment_t * p_parent_env) {
 environment_t * get_parent_environment(const environment_t * p_env) {
     return p_env->parent_environment;
 }
+static value_t make_native(value_t (*native_fn)(int argc, value_t * args)) {
+    value_t v;
+    v.type = VAL_FUNCTION;
+    v.as.function = native_fn;
+    v.is_on_heap = false;
+    return v;
+}
+struct {
+    const char * name;
+    value_t (*native_fn)(int argc, value_t * args);
+} g_native_functions[] = {
+    { .name = "lox_clock", lox_clock },
+};
 environment_t * init_global_scope(void) {
     environment_t * p_env = memory_allocate(sizeof(environment_t));
     p_env->parent_environment = NULL;
@@ -225,5 +239,19 @@ environment_t * init_global_scope(void) {
         p_env->variables[i].name = NULL;
         p_env->variables[i].value = (value_t){0};
     }
+    for (size_t i = 0; i < sizeof(g_native_functions) / sizeof(g_native_functions[0]); i++) {
+        value_t v = make_native(g_native_functions[i].native_fn);
+        declare_variable(p_env, g_native_functions[i].name, &v);
+    }
     return p_env;
+}
+
+// Global lox native functions
+value_t lox_clock(int argc, value_t * args) {
+    (void)argc; (void)args;
+    value_t v;
+    v.type = VAL_NUMBER;
+    v.as.number = (double)time(NULL);
+    v.is_on_heap = true;
+    return v;
 }
