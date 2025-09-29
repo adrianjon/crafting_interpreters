@@ -140,6 +140,7 @@ void GenerateAst(const char* output_dir, const char* string_base_name, const cha
       append_string(&sb_to_c, string_base_name);
       append_string(&sb_to_c, "_t* ");
       append_string(&sb_to_c, string_base_name);
+    //append_string(&sb_to_c, ", void * context) {\n");
       append_string(&sb_to_c, ", const ");
       append_string(&sb_to_c, string_base_name);
       append_string(&sb_to_c, "_visitor_t* visitor, void* context) {\n");
@@ -171,9 +172,10 @@ void GenerateAst(const char* output_dir, const char* string_base_name, const cha
             char *buffer = string_to_lowercase(string_base_name);
             append_string(&sb, buffer);
             memory_free((void**)&buffer);
-            append_string(&sb, ", const ");
-            append_string(&sb, string_base_name);
-            append_string(&sb, "_visitor_t* visitor, void* context);\n");
+          append_string(&sb, ", void * context);\n");
+            // append_string(&sb, ", const ");
+            // append_string(&sb, string_base_name);
+            // append_string(&sb, "_visitor_t* visitor, void* context);\n");
       }
 
     append_string(&sb, "};\n\n");
@@ -218,8 +220,8 @@ if (visitor->visit_assign)
             append_string(&sb_to_c, "(");
             append_string(&sb_to_c, string_base_name);
             append_string(&sb_to_c, ", ");
-            append_string(&sb_to_c, "visitor, context);\n");
-
+            //append_string(&sb_to_c, "visitor, context);\n");
+          append_string(&sb_to_c, "context);\n");
 
             if (types[i + 1]) {
                 append_string(&sb, ",\n");
@@ -348,6 +350,7 @@ if (visitor->visit_assign)
       char *buffer2 = string_to_lowercase(string_base_name);
       append_string(&sb, buffer2);
       memory_free((void**)&buffer2);
+    //append_string(&sb, ", void * context);\n");
       append_string(&sb, ", const ");
       append_string(&sb, string_base_name);
       append_string(&sb, "_visitor_t* visitor, void* context);\n");

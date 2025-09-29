@@ -13,7 +13,7 @@ typedef unsigned long long size_t;
 // } Object;
 
 typedef struct {
-    void* data;
+    void * data;
     size_t size;
     size_t capacity; // in
 } dynamic_array_t;

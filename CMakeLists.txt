@@ -23,12 +23,10 @@ add_executable(lox main.c
         lox/Expr.h
         lox/Stmt.c
         lox/Stmt.h
-        lox/AstPrinter.c
-        lox/AstPrinter.h
-        lox/ast_interpreter.c
-        lox/ast_interpreter.h
         lox/Environment.c
-        lox/Environment.h)
+        lox/Environment.h
+        lox/Interpreter.c
+        lox/Interpreter.h)
 
 add_executable(GenerateAst tools/GenerateAst.c
         extra/Arrays.h
@@ -42,10 +40,4 @@ add_executable(GenerateAst tools/GenerateAst.c
         lox/Scanner.c
         lox/Scanner.h
         lox/Object.c
-        lox/Object.h
-        lox/Expr.c
-        lox/Expr.h
-        lox/Stmt.c
-        lox/Stmt.h
-        lox/Parser.c
-        lox/Parser.h)
+        lox/Object.h)

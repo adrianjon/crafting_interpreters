@@ -30,23 +30,27 @@ extern environment_t * g_scope;
 // value_t * get_global(const char * name);
 
 // Forward declarations
-static void* visit_literal_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context);
-static void* visit_unary_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context);
-static void* visit_binary_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context);
-static void* visit_grouping_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context);
-static void * visit_variable_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context);
-static void * visit_assignment_expr(const expr_t * expr, const expr_visitor_t * visitor, void * context);
-static void * visit_logical_expr(const expr_t * expr, const expr_visitor_t * visitor, void * context);
-static void * eval_unimpl_expr(const expr_t * expr, const expr_visitor_t * v, void * ctx);
-static void * visit_print_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx);
-static void * visit_expression_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx);
-static void * visit_variable_stmt(const stmt_t* stmt, const stmt_visitor_t* visitor, void* context);
-static void * visit_block_stmt(const stmt_t * stmt, const stmt_visitor_t* visitor, void* ctx);
-static void * visit_if_stmt(const stmt_t * p_stmt, const stmt_visitor_t * p_visitor, void * p_ctx);
-static void * visit_while_stmt(const stmt_t * p_stmt, const stmt_visitor_t * p_visitor, void * p_ctx);
-static void * eval_unimpl_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx);
+static void * eval_unimpl_expr          (const expr_t * p_expr, void * p_ctx);
+static void * eval_unimpl_stmt          (const stmt_t * p_stmt, void * p_ctx);
+
+static void * visit_literal_expr        (const expr_t * p_expr, void * p_ctx);
+static void * visit_unary_expr          (const expr_t * p_expr, void * p_ctx);
+static void * visit_binary_expr         (const expr_t * p_expr, void * p_ctx);
+static void * visit_grouping_expr       (const expr_t * p_expr, void * p_ctx);
+static void * visit_variable_expr       (const expr_t * p_expr, void * p_ctx);
+static void * visit_assignment_expr     (const expr_t * p_expr, void * p_ctx);
+static void * visit_logical_expr        (const expr_t * p_expr, void * p_ctx);
+static void * visit_call_expr           (const expr_t * p_expr, void * p_ctx);
+
+static void * visit_print_stmt          (const stmt_t * p_stmt, void * p_ctx);
+static void * visit_expression_stmt     (const stmt_t * p_stmt, void * p_ctx);
+static void * visit_variable_stmt       (const stmt_t * p_stmt, void * p_ctx);
+static void * visit_block_stmt          (const stmt_t * p_stmt, void * p_ctx);
+static void * visit_if_stmt             (const stmt_t * p_stmt, void * p_ctx);
+static void * visit_while_stmt          (const stmt_t * p_stmt, void * p_ctx);
+
 // Public API
-ast_evaluator_t * ast_evaluator_init(void) {
+ast_evaluator_t * ast_evaluator_init    (void) {
     ast_evaluator_t * p_evaluator = memory_allocate(sizeof(ast_evaluator_t));
     if (p_evaluator == NULL) {
         fprintf(stderr, "Error: ast_evaluator_init recieved NULL pointer\n");
@@ -88,23 +92,20 @@ ast_evaluator_t * ast_evaluator_init(void) {
 
     return p_evaluator;
 }
-value_t * ast_evaluator_evaluate_expression(ast_evaluator_t * p_evaluator, const expr_t * expr_p) {
-    // TODO implement these
-    return NULL;
-}
-void ast_evaluator_free(ast_evaluator_t * p_evaluator) {
+void ast_evaluator_free                 (ast_evaluator_t * p_evaluator) {
     if  (!p_evaluator) return;
     memory_free((void**)&p_evaluator);
     p_evaluator = NULL;
 }
-value_t * ast_evaluator_eval_expr(ast_evaluator_t * p_evaluator, const expr_t * expr_p) {
+value_t * ast_evaluator_eval_expr       (ast_evaluator_t * p_evaluator, const expr_t * expr_p) {
     return expr_accept(expr_p, &p_evaluator->expr_visitor, p_evaluator);
 }
-value_t * ast_evaluator_eval_stmt(ast_evaluator_t * p_evaluator, const stmt_t * stmt_p) {
+value_t * ast_evaluator_eval_stmt       (ast_evaluator_t * p_evaluator, const stmt_t * stmt_p) {
     return stmt_accept(stmt_p, &p_evaluator->stmt_visitor, p_evaluator);
 }
-// Private functions
-static void value_free(value_t * val) {
+
+// Private functions many of these can be moved to another execution unit
+static void value_free                  (value_t * val) {
 
     // if (val->type == VAL_STRING) {
     //     memory_free((void**)&val->as.string);
@@ -114,12 +115,12 @@ static void value_free(value_t * val) {
         memory_free((void**)&val);
     }
 }
-static bool value_is_truthy(const value_t * val) {
+static bool value_is_truthy             (const value_t * val) {
     if (val->type == VAL_NIL) return false;
     if (val->type == VAL_BOOL) return val->as.boolean;
     return true;
 }
-static bool value_equals(const value_t * a, const value_t * b) {
+static bool value_equals                (const value_t * a, const value_t * b) {
     if (a->type != b->type) return false;
     switch (a->type) {
         case VAL_NUMBER: return a->as.number == b->as.number;
@@ -129,14 +130,56 @@ static bool value_equals(const value_t * a, const value_t * b) {
         default: return false;
     }
 }
-static bool value_less(const value_t * a, const value_t * b) {
+static bool value_less                  (const value_t * a, const value_t * b) {
     if (a->type != b->type) return false;
     if (a->type != VAL_NUMBER) return false;
     return a->as.number < b->as.number;
 }
-static void * visit_literal_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
-    (void)visitor, (void)context;
-    const expr_literal_t* literal_p = &expr->as.literal_expr;
+static value_t * call_function          (dynamic_array_t * args, ast_evaluator_t * p_evaluator) {
+    // TODO create new environment, bind params,
+    // TODO evaluate body, handle return, restore environment
+    environment_t * p_new_env = create_environment(p_evaluator->current_env);
+    p_evaluator->current_env = p_new_env;
+    // args contains the evaluated values that should be mapped to the arguments of the function
+    // we need to lookup the function name and get its params, then allocate the argument values to
+    // the param names
+    // e.g. add(2, 3) -> add(a, b) should do a = 2 and b = 3
+
+
+    return NULL;
+}
+const char * stringify                  (const value_t * p_value) {
+    if (!p_value) {
+        return NULL;
+    }
+    static char num_buffer[32]; // static buffer for numbers (not thread-safe) TODO better method
+    switch (p_value->type) {
+        case VAL_STRING:
+            return p_value->as.string;
+        case VAL_NUMBER:
+            snprintf(num_buffer, sizeof(num_buffer), "%g", p_value->as.number);
+            return num_buffer;
+        case VAL_BOOL:
+            return p_value->as.boolean ? "true" : "false";
+        case VAL_NIL:
+            return "nil";
+        default:
+            return NULL;
+    }
+}
+
+static void * eval_unimpl_expr          (const expr_t * p_expr, void * p_ctx) {
+    printf("Unimplemented expression: %s\n", g_expr_type_names[p_expr->type]);
+    return NULL;
+}
+static void * eval_unimpl_stmt          (const stmt_t * p_stmt, void * p_ctx) {
+    printf("Unimplemented statement: %s\n", g_stmt_type_names[p_stmt->type]);
+    return NULL;
+}
+
+static void * visit_literal_expr        (const expr_t * p_expr, void * p_ctx) {
+    (void)visitor, (void)p_ctx;
+    const expr_literal_t* literal_p = &p_expr->as.literal_expr;
     value_t* val = memory_allocate(sizeof(value_t));
     val->is_on_heap = true;
 
@@ -166,9 +209,9 @@ static void * visit_literal_expr(const expr_t* expr, const expr_visitor_t* visit
     }
     return val;
 }
-static void * visit_unary_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
-    const expr_unary_t * unary_p = &expr->as.unary_expr;
-    value_t * right = expr_accept(unary_p->right, visitor, context);
+static void * visit_unary_expr          (const expr_t * p_expr, void * p_ctx) {
+    const expr_unary_t * unary_p = &p_expr->as.unary_expr;
+    value_t * right = expr_accept(unary_p->right, visitor, p_ctx);
 
     value_t * result = memory_allocate(sizeof(value_t));
     result->is_on_heap = true;
@@ -195,11 +238,11 @@ static void * visit_unary_expr(const expr_t* expr, const expr_visitor_t* visitor
     value_free(right);
     return result;
 }
-static void * visit_binary_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
-    const expr_binary_t * binary_p = &expr->as.binary_expr;
+static void * visit_binary_expr         (const expr_t * p_expr, void * p_ctx) {
+    const expr_binary_t * binary_p = &p_expr->as.binary_expr;
 
-    value_t * left = expr_accept(binary_p->left, visitor, context);
-    value_t * right = expr_accept(binary_p->right, visitor, context);
+    value_t * left = expr_accept(binary_p->left, visitor, p_ctx);
+    value_t * right = expr_accept(binary_p->right, visitor, p_ctx);
 
     value_t * result = memory_allocate(sizeof(value_t));
     result->is_on_heap = true;
@@ -274,55 +317,42 @@ static void * visit_binary_expr(const expr_t* expr, const expr_visitor_t* visito
     value_free(right);
     return result;
 }
-static void * visit_grouping_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
-    const expr_grouping_t * grouping_p = &expr->as.grouping_expr;
-    return expr_accept(grouping_p->expression, visitor, context);
+static void * visit_grouping_expr       (const expr_t * p_expr, void * p_ctx) {
+    const expr_grouping_t * grouping_p = &p_expr->as.grouping_expr;
+    return expr_accept(grouping_p->expression, visitor, p_ctx);
 }
-static void * visit_variable_expr(const expr_t* expr, const expr_visitor_t* visitor, void* context) {
-    const ast_evaluator_t * p_evaluator = context;
-    const expr_variable_t * p_expr = &expr->as.variable_expr;
-    return env_lookup(p_evaluator->current_env, p_expr->name->lexeme);
+static void * visit_variable_expr       (const expr_t * p_expr, void * p_ctx) {
+    const ast_evaluator_t * p_evaluator = p_ctx;
+    const expr_variable_t * p_variable_expr = &p_expr->as.variable_expr;
+    return env_lookup(p_evaluator->current_env, p_variable_expr->name->lexeme);
 }
-static void * visit_assignment_expr(const expr_t * expr, const expr_visitor_t * visitor, void * context) {
-    const expr_assign_t * p_expr = &expr->as.assign_expr;
-    ast_evaluator_t * p_evaluator = context;
+static void * visit_assignment_expr     (const expr_t * p_expr, void * p_ctx) {
+    const expr_assign_t * p_assign_expr = &p_expr->as.assign_expr;
+    ast_evaluator_t * p_evaluator = p_ctx;
 
-    value_t * p_val = ast_evaluator_eval_expr(p_evaluator, p_expr->value);
+    value_t * p_val = ast_evaluator_eval_expr(p_evaluator, p_assign_expr->value);
     p_val->is_on_heap = false;
     // here we are assuming we are assigning to a variable (if we want to support assigning to fields)
-    assign_variable(p_evaluator->current_env, p_expr->target->as.variable_expr.name->lexeme, p_val);
+    assign_variable(p_evaluator->current_env, p_assign_expr->target->as.variable_expr.name->lexeme, p_val);
     return p_val;
 }
-static void * visit_logical_expr(const expr_t * expr, const expr_visitor_t * visitor, void * context) {
-    const expr_logical_t * p_expr = &expr->as.logical_expr;
-    value_t * left = expr_accept(p_expr->left, visitor, context);
+static void * visit_logical_expr        (const expr_t * p_expr, void * p_ctx) {
+    const expr_logical_t * p_logical_expr = &p_expr->as.logical_expr;
+    value_t * left = expr_accept(p_logical_expr->left, visitor, p_ctx);
 
     // value_t * result = memory_allocate(sizeof(value_t));
     // result->is_on_heap = true;
     // result->type = VAL_BOOL;
 
-    if (p_expr->operator->type == OR) {
+    if (p_logical_expr->operator->type == OR) {
         if (value_is_truthy(left)) return left;
-    } else if (p_expr->operator->type == AND) {
+    } else if (p_logical_expr->operator->type == AND) {
         if (!value_is_truthy(left)) return left;
     }
     value_free(left);
-    return expr_accept(p_expr->right, visitor, context);
+    return expr_accept(p_logical_expr->right, visitor, p_ctx);
 }
-static value_t * call_function(char * function, dynamic_array_t * args, size_t num_args, ast_evaluator_t * p_evaluator) {
-    // TODO create new environment, bind params,
-    // TODO evaluate body, handle return, restore environment
-    environment_t * p_new_env = create_environment(p_evaluator->current_env);
-    p_evaluator->current_env = p_new_env;
-    // args contains the evaluated values that should be mapped to the arguments of the function
-    // we need to lookup the function name and get its params, then allocate the argument values to
-    // the param names
-    // e.g. add(2, 3) -> add(a, b) should do a = 2 and b = 3
-
-
-    return NULL;
-}
-static void * visit_call_expr(const expr_t * p_expr, const expr_visitor_t * p_visitor, void * p_ctx) {
+static void * visit_call_expr           (const expr_t * p_expr, void * p_ctx) {
     value_t * callee = expr_accept(p_expr->as.call_expr.callee, p_visitor, p_ctx);
 
     // evaluate arguments
@@ -346,48 +376,25 @@ static void * visit_call_expr(const expr_t * p_expr, const expr_visitor_t * p_vi
 
     return result;
 }
-static void * eval_unimpl_expr(const expr_t * expr, const expr_visitor_t * v, void * ctx) {
-    (void)expr; (void)ctx;
-    printf("Unimplemented expression: %s\n", g_expr_type_names[expr->type]);
-    return NULL;
-}
-static void * visit_variable_stmt(const stmt_t * stmt, const stmt_visitor_t * visitor, void * context) {
 
-    const ast_evaluator_t * evaluator = context;
-    value_t * p_val = expr_accept(stmt->as.var_stmt.initializer, &evaluator->expr_visitor, context);
+static void * visit_variable_stmt       (const stmt_t * p_stmt, void * p_ctx) {
 
-    declare_variable(evaluator->current_env, stmt->as.var_stmt.name->lexeme, p_val);
+    const ast_evaluator_t * evaluator = p_ctx;
+    value_t * p_val = expr_accept(p_stmt->as.var_stmt.initializer, &evaluator->expr_visitor, p_ctx);
+
+    declare_variable(evaluator->current_env, p_stmt->as.var_stmt.name->lexeme, p_val);
     memory_free((void**)&p_val);
     return NULL;
 }
-static void * visit_expression_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx) {
-    const ast_evaluator_t * evaluator = ctx;
-    void * p = expr_accept(stmt->as.expression_stmt.expression, &evaluator->expr_visitor, ctx);
+static void * visit_expression_stmt     (const stmt_t * p_stmt, void * p_ctx) {
+    const ast_evaluator_t * evaluator = p_ctx;
+    void * p = expr_accept(p_stmt->as.expression_stmt.expression, &evaluator->expr_visitor, p_ctx);
     memory_free(&p);
     return NULL;
 }
-const char * stringify(const value_t * p_value) {
-    if (!p_value) {
-        return NULL;
-    }
-    static char num_buffer[32]; // static buffer for numbers (not thread-safe) TODO better method
-    switch (p_value->type) {
-        case VAL_STRING:
-            return p_value->as.string;
-        case VAL_NUMBER:
-            snprintf(num_buffer, sizeof(num_buffer), "%g", p_value->as.number);
-            return num_buffer;
-        case VAL_BOOL:
-            return p_value->as.boolean ? "true" : "false";
-        case VAL_NIL:
-            return "nil";
-        default:
-            return NULL;
-    }
-}
-static void * visit_print_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx) {
-    const ast_evaluator_t * evaluator = ctx;
-    const value_t * p_value = expr_accept(stmt->as.print_stmt.expression, &evaluator->expr_visitor, ctx);
+static void * visit_print_stmt          (const stmt_t * p_stmt, void * p_ctx) {
+    const ast_evaluator_t * evaluator = p_ctx;
+    const value_t * p_value = expr_accept(p_stmt->as.print_stmt.expression, &evaluator->expr_visitor, p_ctx);
 
     const char * str = stringify(p_value);
     if (!str) {
@@ -395,22 +402,22 @@ static void * visit_print_stmt(const stmt_t * stmt, const stmt_visitor_t * v, vo
         exit(EXIT_FAILURE);
     }
     printf("%s\n", str);
-    if (stmt->as.print_stmt.expression->type != EXPR_VARIABLE) {
+    if (p_stmt->as.print_stmt.expression->type != EXPR_VARIABLE) {
         memory_free((void**)&p_value);
     }
     return NULL;
 }
-static void * visit_block_stmt(const stmt_t * stmt, const stmt_visitor_t* visitor, void* ctx) {
-    environment_t * p_new_env = create_environment(((ast_evaluator_t*)ctx)->current_env);
-    ((ast_evaluator_t*)ctx)->current_env = p_new_env;
-    for (size_t i = 0; i < *stmt->as.block_stmt.count; i++) {
-        ast_evaluator_eval_stmt(ctx, stmt->as.block_stmt.statements[i]);
+static void * visit_block_stmt          (const stmt_t * p_stmt, void * p_ctx) {
+    environment_t * p_new_env = create_environment(((ast_evaluator_t*)p_ctx)->current_env);
+    ((ast_evaluator_t*)p_ctx)->current_env = p_new_env;
+    for (size_t i = 0; i < *p_stmt->as.block_stmt.count; i++) {
+        ast_evaluator_eval_stmt(p_ctx, p_stmt->as.block_stmt.statements[i]);
     }
-    ((ast_evaluator_t*)ctx)->current_env = get_parent_environment(p_new_env); // reset env context
+    ((ast_evaluator_t*)p_ctx)->current_env = get_parent_environment(p_new_env); // reset env context
     free_environment(p_new_env);
     return NULL;
 }
-static void * visit_if_stmt(const stmt_t * p_stmt, const stmt_visitor_t * p_visitor, void * p_ctx) {
+static void * visit_if_stmt             (const stmt_t * p_stmt, void * p_ctx) {
     const stmt_if_t * p_if_stmt = &p_stmt->as.if_stmt;
 
     value_t * condition_value = ast_evaluator_eval_expr(p_ctx, p_if_stmt->condition);
@@ -424,7 +431,7 @@ static void * visit_if_stmt(const stmt_t * p_stmt, const stmt_visitor_t * p_visi
 
     return NULL;
 }
-static void * visit_while_stmt(const stmt_t * p_stmt, const stmt_visitor_t * p_visitor, void * p_ctx) {
+static void * visit_while_stmt          (const stmt_t * p_stmt, void * p_ctx) {
     const stmt_while_t * p_while_stmt = &p_stmt->as.while_stmt;
 
     while (true) {
@@ -439,8 +446,4 @@ static void * visit_while_stmt(const stmt_t * p_stmt, const stmt_visitor_t * p_v
     }
     return NULL;
 }
-static void * eval_unimpl_stmt(const stmt_t * stmt, const stmt_visitor_t * v, void * ctx) {
-    (void)stmt; (void)ctx;
-    printf("Unimplemented statement: %s\n", g_stmt_type_names[stmt->type]);
-    return NULL;
-}
+

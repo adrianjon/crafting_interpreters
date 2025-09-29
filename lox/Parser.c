@@ -128,6 +128,14 @@ expr_t * parser_parse_expression(parser_t * p_parser) {
 stmt_t * parser_parse_statement(parser_t * p_parser) {
     return declaration(p_parser);
 }
+dynamic_array_t * parse_statements(parser_t * p_parser) {
+    dynamic_array_t * statements = create_array(sizeof(stmt_t*));
+    while (parser_get_current_token_type(p_parser) != END_OF_FILE) {
+        stmt_t * p_stmt = parser_parse_statement(p_parser);
+        array_push(statements, &p_stmt, sizeof(stmt_t*));
+    }
+    return statements;
+}
 token_type_t parser_get_current_token_type(const parser_t * p_parser) {
     const token_t * p_token = (token_t*)p_parser->tokens->data + p_parser->current;
     return p_token->type;
@@ -639,3 +647,4 @@ static stmt_t * parse_while_statement(parser_t * p_parser) {
 
     return while_stmt;
 }
+

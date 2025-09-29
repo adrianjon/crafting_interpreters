@@ -31,7 +31,6 @@ typedef struct ast_evaluator ast_evaluator_t;
 
 // new API
 ast_evaluator_t * ast_evaluator_init(void);
-value_t * ast_evaluator_evaluate_expression(ast_evaluator_t * p_evaluator, const expr_t * expr_p);
 void ast_evaluator_free(ast_evaluator_t * p_evaluator);
 value_t * ast_evaluator_eval_expr(ast_evaluator_t * p_evaluator, const expr_t * expr_p);
 value_t * ast_evaluator_eval_stmt(ast_evaluator_t * p_evaluator, const stmt_t * stmt_p);
