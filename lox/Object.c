@@ -5,6 +5,7 @@
 #include "Object.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #include "../extra/Memory.h"
 
@@ -20,6 +21,11 @@ struct object {
         struct {
             bool value;
         } boolean;
+        struct {
+            object_t * (*fn)(int argc, object_t ** argv);
+            int arity;
+            char * name;
+        } native;
         struct {
             void* function;
         } function;
@@ -40,6 +46,8 @@ object_t * new_object(const object_type_t p_object_type, void * value) {
         case OBJECT_BOOLEAN:
             p_object->as.boolean.value = *(bool*)value;
             break;
+        case OBJECT_NATIVE:
+            break;
         case OBJECT_FUNCTION:
             p_object->as.function.function = value;
             break;
@@ -52,13 +60,16 @@ object_t * new_object(const object_type_t p_object_type, void * value) {
 void object_free(object_t ** p_object) {
     switch ((*p_object)->type) {
         case OBJECT_STRING:
-            free((*p_object)->as.string.value);
+            memory_free((void**)&(*p_object)->as.string.value);
             break;
         case OBJECT_NUMBER:
         case OBJECT_BOOLEAN:
             break;
+        case OBJECT_NATIVE:
+            memory_free((void**)&(*p_object)->as.native.name);
+            break;
         case OBJECT_FUNCTION:
-            free((*p_object)->as.function.function);
+            memory_free(&(*p_object)->as.function.function);
             break;
         default:
             break;
@@ -83,4 +94,31 @@ bool get_object_boolean (const object_t * p_object) {
 }
 void * get_object_function (const object_t * p_object) {
     return p_object->as.function.function;
+}
+void * copy_object_value( const object_t * p_object) {
+    void * p_value = NULL;
+    switch (p_object->type) {
+        case OBJECT_STRING:
+            const size_t len = strlen(p_object->as.string.value);
+            p_value = memory_allocate((len + 1) * sizeof(char));
+            memory_copy(p_value, p_object->as.string.value, len);
+            char * str = p_value;
+            str[len] = '\0';
+            break;
+        case OBJECT_NUMBER:
+            p_value = memory_allocate(sizeof(double));
+            *(double*)p_value = p_object->as.number.value;
+            break;
+        case OBJECT_BOOLEAN:
+            p_value = memory_allocate(sizeof(bool));
+            *(bool*)p_value = p_object->as.boolean.value;
+            break;
+        case OBJECT_NATIVE:
+            break;
+        case OBJECT_FUNCTION:
+            break;
+        default:
+            break;
+    }
+    return p_value;
 }

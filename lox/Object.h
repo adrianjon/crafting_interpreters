@@ -14,6 +14,7 @@ typedef enum {
     OBJECT_STRING,
     OBJECT_NUMBER,
     OBJECT_BOOLEAN,
+    OBJECT_NATIVE,
     OBJECT_FUNCTION,
     OBJECT_NIL,
 } object_type_t;
@@ -27,6 +28,7 @@ char * get_object_string (const object_t * p_object);
 double get_object_number (const object_t * p_object);
 bool get_object_boolean (const object_t * p_object);
 void * get_object_function (const object_t * p_object);
-
+void * get_object_value( const object_t * p_object);
+void * copy_object_value(const object_t * p_object);
 
 #endif //LOX_OBJECT_H

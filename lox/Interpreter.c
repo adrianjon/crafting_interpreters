@@ -248,6 +248,8 @@ static void * visit_unary_expr(const expr_t * p_expr, void * p_ctx) {
     return NULL;
 }
 static void * visit_variable_expr(const expr_t * p_expr, void * p_ctx) {
+    const expr_variable_t expr = p_expr->as.variable_expr;
+    return env_lookup(((interpreter_t*)p_ctx)->p_current_env, expr.name->lexeme);
     throw_error(p_ctx, "Unimplemented expression: %s (%d)",
         g_expr_type_names[p_expr->type], p_expr->type);
     return NULL;
@@ -283,6 +285,7 @@ static void * visit_if_stmt(const stmt_t * p_stmt, void * p_ctx) {
 static void * visit_print_stmt(const stmt_t * p_stmt, void * p_ctx) {
     const stmt_print_t stmt = p_stmt->as.print_stmt;
     const object_t * p_object = evaluate(stmt.expression, p_ctx);
+    check_runtime_error(p_ctx);
     const char * str = stringify(p_object);
     if (!str) {
         throw_error(p_ctx, "print error: object is null.");
@@ -300,8 +303,9 @@ static void * visit_return_stmt(const stmt_t * p_stmt, void * p_ctx) {
     return NULL;
 }
 static void * visit_var_stmt(const stmt_t * p_stmt, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented statement: %s (%d)",
-        g_stmt_type_names[p_stmt->type], p_stmt->type);
+    const stmt_var_t stmt = p_stmt->as.var_stmt;
+    object_t * p_value = evaluate(stmt.initializer, p_ctx);
+    declare_variable(((interpreter_t*)p_ctx)->p_current_env, stmt.name->lexeme, p_value);
     return NULL;
 }
 static void * visit_while_stmt(const stmt_t * p_stmt, void * p_ctx) {

@@ -18,9 +18,9 @@ typedef struct environment environment_t;
 environment_t * init_global_scope(void);
 environment_t * create_environment(environment_t * p_parent_env);
 environment_t * get_parent_environment(const environment_t * p_env);
-void assign_variable(environment_t * p_env, const char * p_name, const value_t * p_val);
-void declare_variable(environment_t * p_env, const char * p_name, const value_t * p_type);
-value_t * env_lookup(environment_t * p_env, const char * p_name);
+bool assign_variable(environment_t * p_env, const char * p_name, object_t * p_object);
+bool declare_variable(environment_t * p_env, const char * p_name, object_t * p_object);
+object_t * env_lookup(environment_t * p_env, const char * p_name);
 void free_environment(environment_t * p_env);
 
 #endif //LOX_ENVIRONMENT_H
