@@ -43,6 +43,7 @@ object_t * new_object(const object_type_t p_object_type, void * value) {
         case OBJECT_FUNCTION:
             p_object->as.function.function = value;
             break;
+        case OBJECT_NIL:
         default:
             break;
     }

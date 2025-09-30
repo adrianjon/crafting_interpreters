@@ -15,10 +15,12 @@ typedef enum {
     OBJECT_NUMBER,
     OBJECT_BOOLEAN,
     OBJECT_FUNCTION,
+    OBJECT_NIL,
 } object_type_t;
 
 // API
 object_t * new_object(object_type_t p_object_type, void * value);
+void object_free(object_t ** p_object);
 object_type_t get_object_type (const object_t * p_object);
 void set_object_type (object_t * p_object, object_type_t p_object_type);
 char * get_object_string (const object_t * p_object);

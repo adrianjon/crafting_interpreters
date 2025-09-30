@@ -115,11 +115,32 @@ static void check_runtime_error(interpreter_t * p_interpreter) {
 static void throw_error(interpreter_t * p_interpreter, const char * fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    vsnprintf(p_interpreter->error_message, sizeof(p_interpreter->error_message),
+    vsnprintf(p_interpreter->error_message,
+        sizeof(p_interpreter->error_message),
         fmt, args);
     p_interpreter->error_message[sizeof(p_interpreter->error_message) - 1] = '\0';
     va_end(args);
     p_interpreter->had_runtime_error = true;
+}
+const char * stringify(const object_t * p_object) {
+    if (!p_object) {
+        return NULL;
+    }
+    static char buffer[32]; // static buffer for numbers (not thread-safe) TODO better method
+    switch (get_object_type(p_object)) {
+        case OBJECT_STRING:
+            buffer[0] = '\0';
+        case OBJECT_NUMBER:
+            snprintf(buffer, sizeof(buffer), "%g", get_object_number(p_object));
+            break;
+        case OBJECT_BOOLEAN:
+        case OBJECT_FUNCTION:
+        case OBJECT_NIL:
+        default:
+            buffer[0] = '\0';
+            break;
+    }
+    return buffer;
 }
 
 // Private visitor functions
@@ -129,9 +150,48 @@ static void * visit_assign_expr(const expr_t * p_expr, void * p_ctx) {
     return NULL;
 }
 static void * visit_binary_expr(const expr_t * p_expr, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented expression: %s (%d)",
-        g_expr_type_names[p_expr->type], p_expr->type);
-    return NULL;
+    const expr_binary_t expr = p_expr->as.binary_expr;
+
+    // TODO change this to objects
+    object_t * left  = evaluate(expr.left, p_ctx);
+    check_runtime_error(p_ctx);
+    object_t * right = evaluate(expr.right, p_ctx);
+    check_runtime_error(p_ctx);
+    object_t * result;
+    //result->is_on_heap = true;
+
+    switch (expr.operator->type) {
+        case PLUS:
+            if (get_object_type(left) == OBJECT_NUMBER &&
+                    get_object_type(right) == OBJECT_NUMBER) {
+                double sum = get_object_number(left) + get_object_number(right);
+                result = new_object(OBJECT_NUMBER, &sum);
+            } else {
+                result = NULL;
+                throw_error(p_ctx, "Invalid operand types for operator: %s",
+                    expr.operator->lexeme);
+            }
+            break;
+        case STAR:
+            if (get_object_type(left) == OBJECT_NUMBER &&
+                    get_object_type(right) == OBJECT_NUMBER) {
+                double product = get_object_number(left) * get_object_number(right);
+                result = new_object(OBJECT_NUMBER, &product);
+            } else {
+                result = NULL;
+                throw_error(p_ctx, "Invalid operand types for operator: %s",
+                    expr.operator->lexeme);
+            }
+            break;
+        default:
+            throw_error(p_ctx, "Unknown binary operator: %s",
+                expr.operator->lexeme);
+            return NULL;
+    }
+    object_free(&left);
+    object_free(&right);
+    return result;
+
 }
 static void * visit_call_expr(const expr_t * p_expr, void * p_ctx) {
     throw_error(p_ctx, "Unimplemented expression: %s (%d)",
@@ -149,14 +209,18 @@ static void * visit_grouping_expr(const expr_t * p_expr, void * p_ctx) {
     return NULL;
 }
 static void * visit_literal_expr(const expr_t * p_expr, void * p_ctx) {
-    const expr_literal_t * p_literal = &p_expr->as.literal_expr;
-    switch (p_literal->kind->type) {
+    const expr_literal_t expr = p_expr->as.literal_expr;
+    object_t * p_object;
+    switch (expr.kind->type) {
+        case NUMBER:
+            double value = strtod(expr.kind->lexeme, NULL);
+            return new_object(OBJECT_NUMBER, &value);
         default:
             throw_error(p_ctx, "Unknown literal type: %s",
-                g_token_type_names[p_literal->kind->type]);
-            return NULL;
+                g_token_type_names[expr.kind->type]);
+            return new_object(OBJECT_NIL, NULL);
     }
-    object_t * p_object;
+
 }
 static void * visit_logical_expr(const expr_t * p_expr, void * p_ctx) {
     throw_error(p_ctx, "Unimplemented expression: %s (%d)",
@@ -215,9 +279,19 @@ static void * visit_if_stmt(const stmt_t * p_stmt, void * p_ctx) {
         g_stmt_type_names[p_stmt->type], p_stmt->type);
     return NULL;
 }
+// ReSharper disable once CppDFAConstantFunctionResult
 static void * visit_print_stmt(const stmt_t * p_stmt, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented statement: %s (%d)",
-        g_stmt_type_names[p_stmt->type], p_stmt->type);
+    const stmt_print_t stmt = p_stmt->as.print_stmt;
+    const object_t * p_object = evaluate(stmt.expression, p_ctx);
+    const char * str = stringify(p_object);
+    if (!str) {
+        throw_error(p_ctx, "print error: object is null.");
+        return NULL;
+    }
+    if (p_object) {
+        memory_free((void**)&p_object);
+    }
+    printf("%s\n", str);
     return NULL;
 }
 static void * visit_return_stmt(const stmt_t * p_stmt, void * p_ctx) {
