@@ -15,10 +15,11 @@ int main(void) {
     scanner_print_tokens(p_scanner);
 
     parser_t * p_parser = parser_init(scanner_get_tokens(p_scanner));
-    const dynamic_array_t * statements = parse_statements(p_parser);
+    dynamic_array_t * statements = parse_statements(p_parser);
 
     interpreter_t * p_interpreter = new_interpreter();
     interpret(statements, p_interpreter);
+    free_statements(statements);
 
     interpreter_free(&p_interpreter);
     parser_free(p_parser);

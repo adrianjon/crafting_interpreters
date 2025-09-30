@@ -18,6 +18,7 @@ typedef enum {
 } object_type_t;
 
 // API
+object_t * new_object(object_type_t p_object_type, void * value);
 object_type_t get_object_type (const object_t * p_object);
 void set_object_type (object_t * p_object, object_type_t p_object_type);
 char * get_object_string (const object_t * p_object);

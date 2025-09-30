@@ -20,6 +20,7 @@ parser_t * parser_init(const dynamic_array_t * tokens);
 expr_t * parser_parse_expression(parser_t * p_parser);
 stmt_t * parser_parse_statement(parser_t * p_parser);
 dynamic_array_t * parse_statements(parser_t * p_parser);
+void free_statements(dynamic_array_t * statements);
 token_type_t parser_get_current_token_type(const parser_t * p_parser);
 void parser_free(parser_t * p_parser);
 void free_expression(expr_t* expr);

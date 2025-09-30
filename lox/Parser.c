@@ -136,6 +136,15 @@ dynamic_array_t * parse_statements(parser_t * p_parser) {
     }
     return statements;
 }
+void free_statements(dynamic_array_t * statements) {
+    if (!statements) return;
+    const size_t count = statements->size / sizeof(stmt_t*);
+    for (size_t i = 0; i < count; i++) {
+        free_statement(((stmt_t**)statements->data)[i]);
+    }
+    memory_free(&statements->data);
+    memory_free((void**)&statements);
+}
 token_type_t parser_get_current_token_type(const parser_t * p_parser) {
     const token_t * p_token = (token_t*)p_parser->tokens->data + p_parser->current;
     return p_token->type;
