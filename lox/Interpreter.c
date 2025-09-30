@@ -20,21 +20,10 @@ struct interpreter {
     bool had_runtime_error;
     char error_message[256];
 };
-void check_runtime_error(interpreter_t * p_interpreter) {
-    if (p_interpreter->had_runtime_error) {
-        fprintf(stderr, "RuntimeError: %s\n", p_interpreter->error_message);
-        exit(EXIT_FAILURE);
-    }
-}
-void throw_error(interpreter_t * p_interpreter, const char * fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(p_interpreter->error_message, sizeof(p_interpreter->error_message),
-        fmt, args);
-    p_interpreter->error_message[sizeof(p_interpreter->error_message) - 1] = '\0';
-    va_end(args);
-    p_interpreter->had_runtime_error = true;
-}
+
+// Forward declarations
+static void check_runtime_error(interpreter_t * p_interpreter);
+static void throw_error(interpreter_t * p_interpreter, const char * fmt, ...);
 
 static void * visit_assign_expr         (const expr_t * p_expr, void * p_ctx);
 static void * visit_binary_expr         (const expr_t * p_expr, void * p_ctx);
@@ -94,13 +83,13 @@ interpreter_t * new_interpreter(void) {
     p_interpreter->error_message[0] = '\0';
     return p_interpreter;
 }
-void interpreter_free       (interpreter_t ** p_interpreter) {
+void interpreter_free(interpreter_t ** p_interpreter) {
     if (!p_interpreter) return;
     free_environment((*p_interpreter)->p_current_env);
     memory_free((void**)p_interpreter);
     *p_interpreter = NULL;
 }
-void interpret              (const dynamic_array_t * statements, interpreter_t * p_interpreter) {
+void interpret(const dynamic_array_t * statements, interpreter_t * p_interpreter) {
     stmt_t ** p_stmts = statements->data;
     const size_t stmts_count = statements->size / sizeof(stmt_t *);
     for (size_t i = 0; i < stmts_count; i++) {
@@ -108,15 +97,32 @@ void interpret              (const dynamic_array_t * statements, interpreter_t *
         check_runtime_error(p_interpreter);
     }
 }
-object_t * evaluate         (const expr_t * p_expr, interpreter_t * p_interpreter) {
-
+object_t * evaluate(const expr_t * p_expr, interpreter_t * p_interpreter) {
     return expr_accept(p_expr, &p_interpreter->expr_visitor, p_interpreter);
 }
-void * execute              (const stmt_t * p_stmt, interpreter_t * p_interpreter) {
+void * execute(const stmt_t * p_stmt, interpreter_t * p_interpreter) {
     stmt_accept(p_stmt, &p_interpreter->stmt_visitor, p_interpreter);
     return NULL;
 }
 
+// Private helper functions
+static void check_runtime_error(interpreter_t * p_interpreter) {
+    if (p_interpreter->had_runtime_error) {
+        fprintf(stderr, "RuntimeError: %s\n", p_interpreter->error_message);
+        exit(EXIT_FAILURE);
+    }
+}
+static void throw_error(interpreter_t * p_interpreter, const char * fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(p_interpreter->error_message, sizeof(p_interpreter->error_message),
+        fmt, args);
+    p_interpreter->error_message[sizeof(p_interpreter->error_message) - 1] = '\0';
+    va_end(args);
+    p_interpreter->had_runtime_error = true;
+}
+
+// Private visitor functions
 static void * visit_assign_expr(const expr_t * p_expr, void * p_ctx) {
     throw_error(p_ctx, "Unimplemented expression: %s (%d)",
         g_expr_type_names[p_expr->type], p_expr->type);
