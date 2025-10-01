@@ -7,32 +7,20 @@
 
 #include <stdbool.h>
 
-// Define memory allocation functions API
+typedef struct region region_t;
 
-// Allocate a block of memory of given size
-void* memory_allocate(size_t size);
+void * memory_allocate(size_t size);
+void * memory_reallocate(void * p, size_t old_size, size_t new_size);
+// const void * memory_character(const void * p, char c, size_t n);
+bool memory_copy(void * p_dest, const void * p_src, size_t n);
+bool memory_compare(const void * p_1, const void * p_2, size_t n);
+// void memory_replace(char * p, char old_char, char new_char);
+void memory_free(void ** pp);
+// void memory_free_all(void);
 
-// Reallocate a previously allocated block of memory
-void* memory_reallocate(void* ptr, size_t new_size);
-
-// Returns a pointer to the first occurrence of the character c in the memory block
-const void* memory_character(const void* ptr, char c, size_t n);
-
-// Copy a block of memory from one location to another
-bool memory_copy(void* dest, const void* src, size_t n);
-
-// Compare two blocks of memory, return true if they are equal
-bool memory_compare(const void* ptr1, const void* ptr2, size_t n);
-
-
-// only when dealing with c-strings we can assume null-termination. This is bad.
-void memory_replace(char* ptr, char old_char, char new_char);
-
-// Free a previously allocated block of memory
-void memory_free(void** ptr);
-
-
-void memory_free_all(void);
+region_t * new_region(void);
+void * region_allocate(size_t size);
+void region_free(region_t * p_region);
 
 // debug functions TODO: remove api access
 void debug_memory_pool();

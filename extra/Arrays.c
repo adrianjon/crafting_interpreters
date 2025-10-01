@@ -21,7 +21,7 @@ dynamic_array_t * create_array(size_t initial_capacity) {
 void array_push(dynamic_array_t* array, const void* element, const size_t element_size) {
     if (array->size + element_size > array->capacity) {
         array->capacity *= 2;
-        array->data = memory_reallocate(array->data, array->capacity);
+        array->data = memory_reallocate(array->data, array->size, array->capacity);
     }
     memory_copy((char*)array->data + array->size, element, element_size);
     array->size += element_size;
@@ -65,7 +65,7 @@ void append_string(string_builder_t* sb, const char* str) {
     }
     while (sb->length + len > sb->capacity) {
         sb->capacity *= 2;
-        sb->buffer = (char*)memory_reallocate(sb->buffer, sb->capacity);
+        sb->buffer = (char*)memory_reallocate(sb->buffer, sb->length, sb->capacity);
         if (!sb->buffer) {
             print("Failed to reallocate memory for string builder\n");
             return;
