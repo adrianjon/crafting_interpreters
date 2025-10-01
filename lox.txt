@@ -1,2 +1,4 @@
-var x = 2 + 3 * 10;
-print x;
+fun add(x, y) {
+    print x + y;
+}
+add(5, 3);

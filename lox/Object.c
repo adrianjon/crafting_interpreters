@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "../extra/Memory.h"
+#include "Function.h"
 
 struct object {
     object_type_t type;
@@ -27,7 +28,7 @@ struct object {
             char * name;
         } native;
         struct {
-            void* function;
+            function_t * p_function;
         } function;
     } as;
 };
@@ -49,7 +50,7 @@ object_t * new_object(const object_type_t p_object_type, void * value) {
         case OBJECT_NATIVE:
             break;
         case OBJECT_FUNCTION:
-            p_object->as.function.function = value;
+            p_object->as.function.p_function = value;
             break;
         case OBJECT_NIL:
         default:
@@ -69,7 +70,7 @@ void object_free(object_t ** p_object) {
             memory_free((void**)&(*p_object)->as.native.name);
             break;
         case OBJECT_FUNCTION:
-            memory_free(&(*p_object)->as.function.function);
+            memory_free(&(*p_object)->as.function.p_function);
             break;
         default:
             break;
@@ -93,7 +94,7 @@ bool get_object_boolean (const object_t * p_object) {
     return p_object->as.boolean.value;
 }
 void * get_object_function (const object_t * p_object) {
-    return p_object->as.function.function;
+    return p_object->as.function.p_function;
 }
 void * copy_object_value( const object_t * p_object) {
     void * p_value = NULL;
@@ -116,6 +117,7 @@ void * copy_object_value( const object_t * p_object) {
         case OBJECT_NATIVE:
             break;
         case OBJECT_FUNCTION:
+            p_value = new_function(get_function_declaration(p_object->as.function.p_function));
             break;
         default:
             break;

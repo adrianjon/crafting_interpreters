@@ -22,7 +22,9 @@ void memory_free(void ** pp)
 {
 
 }
-
+size_t align_up(const size_t n, const size_t align) {
+    return (n + align - 1) & ~(align - 1);
+}
 // Allocate a block of memory of given size
 void* memory_allocate(const size_t size) {
     if (size == 0) return NULL;
@@ -51,23 +53,14 @@ void* memory_reallocate(void * p, const size_t old_size, const size_t new_size) 
     }
     return new_ptr;
 }
-
-// Returns a pointer to the first occurrence of the character c in the memory block
-// const void* memory_character(const void* ptr, const char c, size_t n)
-// {
-//     if (!ptr || n == 0) return NULL;
-//
-//     const char* p = ptr;
-//     while (n--) {
-//         if (*p == (char)c){
-//             //printf("Found character '%c'.\n", c);
-//             return p;
-//         }
-//         p++;
-//     }
-//     return NULL;
-// }
-
+// searches n characters ahead for c and returns pointer to first occurence
+const void * memory_character(const void * p, char c, size_t n) {
+    for (size_t i = 0; i < n; i++) {
+        if (*(char*)p == c) return p;
+        p = (char*)p + 1;
+    }
+    return NULL;
+}
 // Copy a block of memory from one location to another
 bool memory_copy(void * p_dest, const void * p_src, size_t n)
 {
@@ -75,10 +68,6 @@ bool memory_copy(void * p_dest, const void * p_src, size_t n)
     char* d = p_dest;
     const char* s = p_src;
 
-    // printf("Copying %zu bytes from %p to %p\n", n, src, dest);
-    // printf("%c\n", ((char*)dest)[0]);
-    // *d = *s;
-    // printf("%c\n", ((char*)dest)[0]);
     while (n-- != 0) {
 
         *d++ = *s++;
@@ -100,42 +89,14 @@ bool memory_compare(const void * p_1, const void * p_2, size_t n)
     return true;
 }
 
-// only when dealing with c-strings we can assume null-termination. This is bad.
-// void memory_replace(char* ptr, const char old_char, const char new_char)
-// {
-//     if (!ptr) return;
-//     while (*ptr) {
-//         if (*ptr == old_char) {
-//             *ptr = new_char;
-//         }
-//         ptr++;
-//     }
-// }
-
-// Free a previously allocated block of memory
-// void memory_free(void ** pp)
-// {
-//     return ;
-//     if (!pp || !*pp) {
-//         print("Attempted to free a NULL pointer\n");
-//         return;
-//     }
-//     //printf("Freeing memory at %p\n", *ptr);
-//     free(*pp);
-//     //printf("Freed memory at %p\n", *ptr);
-//     *pp = NULL;
-// }
-
-
-
 region_t * new_region(void) {
     region_t * p_region = malloc(sizeof(region_t));
     memset(p_region, 0, sizeof(region_t));
     p_region->capacity = REGION_SIZE;
     p_region->used = 0;
-    g_p_current_region = p_region;
     return p_region;
 }
+#define REGION_ALIGNMENT 8
 void * region_allocate(const size_t size) {
     if (!g_p_current_region) {
         fprintf(stderr, "Region used uninitialized.\n");
@@ -145,11 +106,15 @@ void * region_allocate(const size_t size) {
         fprintf(stderr, "Memory region full.\n");
         exit(EXIT_FAILURE);
     }
-    void * p = g_p_current_region->buffer + g_p_current_region->used;
-    g_p_current_region->used += size;
+    const size_t offset = align_up(g_p_current_region->used, REGION_ALIGNMENT);
+    void * p = g_p_current_region->buffer + offset;
+    g_p_current_region->used = offset + size;
     return p;
 }
 void region_free(region_t * p_region) {
     memset(p_region->buffer, 0, REGION_SIZE);
     free(p_region);
+}
+void activate_region(region_t * p_region) {
+    g_p_current_region = p_region;
 }

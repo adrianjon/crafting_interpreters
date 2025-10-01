@@ -16,18 +16,11 @@ add_executable(lox main.c
         lox/Stmt.c
         lox/Environment.c
         lox/Interpreter.c
+        lox/Function.c
 )
 
 add_executable(GenerateAst tools/GenerateAst.c
-        extra/Arrays.h
-        extra/Memory.h
-        extra/Windows.h
         extra/Arrays.c
         extra/Memory.c
         extra/Windows.c
-        lox/Token.c
-        lox/Token.h
-        lox/Scanner.c
-        lox/Scanner.h
-        lox/Object.c
-        lox/Object.h)
+)

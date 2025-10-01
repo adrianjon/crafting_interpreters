@@ -61,7 +61,8 @@ typedef struct {
 typedef struct {
 	expr_t* callee;
 	token_t* paren;
-	dynamic_array_t* arguments;
+	expr_t ** arguments;
+	size_t * count;
 	
 } expr_call_t;
 

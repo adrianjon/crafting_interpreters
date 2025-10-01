@@ -19,7 +19,7 @@ environment_t * init_global_scope(void);
 environment_t * create_environment(environment_t * p_parent_env);
 environment_t * get_parent_environment(const environment_t * p_env);
 bool assign_variable(environment_t * p_env, const char * p_name, object_t * p_object);
-bool declare_variable(environment_t * p_env, const char * p_name, object_t * p_object);
+bool declare_variable(environment_t * p_env, const char * p_name, const object_t * p_object);
 object_t * env_lookup(environment_t * p_env, const char * p_name);
 void free_environment(environment_t * p_env);
 

@@ -11,6 +11,7 @@
 
 #include "Parser.h"
 #include "Environment.h"
+#include "Function.h"
 #include "../extra/Memory.h"
 
 struct interpreter {
@@ -104,6 +105,12 @@ void * execute(const stmt_t * p_stmt, interpreter_t * p_interpreter) {
     stmt_accept(p_stmt, &p_interpreter->stmt_visitor, p_interpreter);
     return NULL;
 }
+environment_t * get_interpreter_environment(const interpreter_t * p_interpreter) {
+    return p_interpreter->p_current_env;
+}
+void set_interpreter_environment(interpreter_t * p_interpreter, environment_t * p_env) {
+    p_interpreter->p_current_env = p_env;
+}
 
 // Private helper functions
 static void check_runtime_error(interpreter_t * p_interpreter) {
@@ -194,6 +201,17 @@ static void * visit_binary_expr(const expr_t * p_expr, void * p_ctx) {
 
 }
 static void * visit_call_expr(const expr_t * p_expr, void * p_ctx) {
+    const expr_call_t expr = p_expr->as.call_expr;
+    object_t * callee = evaluate(expr.callee, p_ctx);
+    check_runtime_error(p_ctx);
+    object_t ** arguments = memory_allocate(*expr.count * sizeof(object_t*));
+    for (size_t i = 0; i < *expr.count; i++) {
+        arguments[i] = evaluate(expr.arguments[i], p_ctx);
+        check_runtime_error(p_ctx);
+    }
+
+    call_function(get_object_function(callee), p_ctx, arguments);
+    return NULL;
     throw_error(p_ctx, "Unimplemented expression: %s (%d)",
         g_expr_type_names[p_expr->type], p_expr->type);
     return NULL;
@@ -272,9 +290,14 @@ static void * visit_expression_stmt(const stmt_t * p_stmt, void * p_ctx) {
     return NULL;
 }
 static void * visit_function_stmt(const stmt_t * p_stmt, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented statement: %s (%d)",
-        g_stmt_type_names[p_stmt->type], p_stmt->type);
+    stmt_function_t stmt = p_stmt->as.function_stmt;
+    function_t * p_function = new_function(&stmt);
+    const object_t * p_object = new_object(OBJECT_FUNCTION, p_function);
+    declare_variable(((interpreter_t*)p_ctx)->p_current_env, stmt.name->lexeme, p_object);
     return NULL;
+    // throw_error(p_ctx, "Unimplemented statement: %s (%d)",
+    //     g_stmt_type_names[p_stmt->type], p_stmt->type);
+    // return NULL;
 }
 static void * visit_if_stmt(const stmt_t * p_stmt, void * p_ctx) {
     throw_error(p_ctx, "Unimplemented statement: %s (%d)",
@@ -304,7 +327,8 @@ static void * visit_return_stmt(const stmt_t * p_stmt, void * p_ctx) {
 }
 static void * visit_var_stmt(const stmt_t * p_stmt, void * p_ctx) {
     const stmt_var_t stmt = p_stmt->as.var_stmt;
-    object_t * p_value = evaluate(stmt.initializer, p_ctx);
+    const object_t * p_value = evaluate(stmt.initializer, p_ctx);
+    check_runtime_error(p_ctx);
     declare_variable(((interpreter_t*)p_ctx)->p_current_env, stmt.name->lexeme, p_value);
     return NULL;
 }

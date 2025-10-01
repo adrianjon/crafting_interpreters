@@ -47,8 +47,10 @@ typedef struct {
 
 typedef struct {
 	token_t* name;
-	token_t* params;
-	stmt_t* body;
+	token_t ** params;
+	size_t * params_count;
+	stmt_t ** body;
+	size_t * count;
 	
 } stmt_function_t;
 

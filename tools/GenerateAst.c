@@ -19,7 +19,7 @@ static const char* ast_expr_grammar[] = {
 //< Statements and State assign-expr
       "binary   : expr_t* left, token_t* operator, expr_t* right",
 //> Functions call-expr
-      "call     : expr_t* callee, token_t* paren, dynamic_array_t* arguments",
+      "call     : expr_t* callee, token_t* paren, expr_t ** arguments, size_t * count",
 //< Functions call-expr
 //> Classes get-ast
       "get      : expr_t* object, token_t* name",
@@ -54,7 +54,7 @@ static const char* ast_stmt_grammar[] = {
 //< block-ast
 
 //> Functions function-ast
-      "function   : token_t* name, token_t* params, stmt_t* body",
+      "function   : token_t* name, token_t ** params, size_t * params_count, stmt_t ** body, size_t * count",
 //< Functions function-ast
 
 /* Classes class-ast < Inheritance superclass-ast
@@ -408,9 +408,11 @@ if (visitor->visit_assign)
 }
 
 int main(void) {
+    region_t * r = new_region();
+    activate_region(r);
       GenerateAst("./lox", "expr", ast_expr_grammar);
       GenerateAst("./lox", "stmt", ast_stmt_grammar);
-
+    region_free(r);
       // for(int i = 0; ast_expr_grammar[i]; i++) {
       //     char buffer[20][MAX_TOKEN_LEN] = {0};
       //     const char* p = (const char*)memory_character(ast_expr_grammar[i], ':', MAX_TOKEN_LEN) + 1; // move past colon

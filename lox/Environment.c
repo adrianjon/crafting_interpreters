@@ -56,7 +56,7 @@ struct environment {
 //     }
 // }
 bool declare_variable(environment_t * p_env, const char * p_name,
-     object_t * p_object) {
+    const object_t * p_object) {
     if (p_env->variable_count < MAX_VARS) {
         p_env->variables[p_env->variable_count].name = memory_allocate(strlen(p_name) + 1);
         if (!memory_copy(p_env->variables[p_env->variable_count].name, p_name, strlen(p_name) + 1)) {

@@ -28,7 +28,7 @@
                    | "(" expression ")" | IDENTIFIER ;
 
     program         -> declaration* EOF ;
-    declaration     -> varDecl | statement ;
+    declaration     -> funDecl | varDecl | statement ;
     statement       -> exprStmt | ifStmt | whileStmt | printStmt | block ;
     exprStmt        -> expression ";" ;
     ifStmt          -> "if" "(" expression ")" statement
@@ -36,6 +36,9 @@
     whileStmt       -> "while" "(" expression ")" statement ;
     printStmt       -> "print" expression ";" ;
     varDecl         -> "var" IDENTIFIER ( "=" expression )? ";" ;
+    funDecl         -> "fun" function ;
+    function        -> IDENTIFIER "(" parameters? ")" block ;
+    parameters      -> IDENTIFIER ( "," IDENTIFIER )* ;
     block           -> "{" declaration* "}" ;
 
 */
@@ -178,15 +181,15 @@ void free_expression(expr_t * expr) {
             break;
         case EXPR_CALL:
             // call expression
-            free_expression(expr->as.call_expr.callee);
-            memory_free((void**)&expr->as.call_expr.paren);
-            // assuming argument dynamic array consists of expressions
-            const size_t number_of_arguments = expr->as.call_expr.arguments->size / sizeof(expr_t*);
-            expr_t ** args = expr->as.call_expr.arguments->data;
-            for (size_t i = 0; i < number_of_arguments; i++) {
-                free_expression(args[i]);
-            }
-            array_free(expr->as.call_expr.arguments);
+            // free_expression(expr->as.call_expr.callee);
+            // memory_free((void**)&expr->as.call_expr.paren);
+            // // assuming argument dynamic array consists of expressions
+            // const size_t number_of_arguments = expr->as.call_expr.arguments->size / sizeof(expr_t*);
+            // expr_t ** args = expr->as.call_expr.arguments->data;
+            // for (size_t i = 0; i < number_of_arguments; i++) {
+            //     free_expression(args[i]);
+            // }
+            // array_free(expr->as.call_expr.arguments);
             break;
         case EXPR_GET:
             free_expression(expr->as.get_expr.object);
@@ -423,7 +426,7 @@ static expr_t* parse_unary(parser_t* parser) {
 }
 // function calling helping function
 static expr_t * finish_call(parser_t * p_parser, expr_t * callee) {
-    dynamic_array_t * arguments = create_array(sizeof(expr_t));
+    dynamic_array_t * arguments = create_array(sizeof(expr_t*));
     if (!token_check(p_parser, RIGHT_PAREN)) {
         do {
             expr_t * arg = parse_expression(p_parser);
@@ -440,7 +443,10 @@ static expr_t * finish_call(parser_t * p_parser, expr_t * callee) {
     expr->type = EXPR_CALL;
     expr->as.call_expr.callee = callee;
     expr->as.call_expr.paren = p_token;
-    expr->as.call_expr.arguments = arguments;
+    expr->as.call_expr.arguments = arguments->data;
+    size_t * count = memory_allocate(sizeof(size_t));
+    *count = arguments->size / sizeof(expr_t*);
+    expr->as.call_expr.count = count;
     return expr;
 }
 static expr_t * parse_call(parser_t * p_parser) {
@@ -582,7 +588,46 @@ static stmt_t * var_declaration(parser_t * p_parser) {
     }
     return var_decl_stmt;
 }
+static stmt_t * fun_declaration(parser_t * p_parser, const char * kind) {
+    char buf[256] = {0};
+    snprintf(buf, 256, "Expect %s name.", kind);
+    token_t * p_name = memory_allocate(sizeof(token_t));
+    *p_name = consume(p_parser, IDENTIFIER, buf);
+
+    snprintf(buf, 256, "Expect '(' after %s name.", kind);
+    consume(p_parser, LEFT_PAREN, buf);
+    dynamic_array_t * parameters = create_array(8 * sizeof(token_t*));
+    if (!token_check(p_parser, RIGHT_PAREN)) {
+        do {
+            if (parameters->size >= 255 * sizeof(token_t*)) { // limited at 255 parameters
+                fprintf(stderr, "ParseError: Can't have more than 255 parameters\n");
+                exit(EXIT_FAILURE);
+            }
+            token_t * p_token = memory_allocate(sizeof(token_t));
+            *p_token = consume(p_parser, IDENTIFIER, "Expected parameter name.");
+            array_push(parameters, &p_token, sizeof(token_t*));
+        } while (token_match(p_parser, 1, COMMA));
+    }
+    consume(p_parser, RIGHT_PAREN, "Expect ')' after parameters.");
+    snprintf(buf, 256, "Expect '{' before %s body.", kind);
+    consume(p_parser, LEFT_BRACE, buf);
+    const stmt_t * body_stmt = parse_block_statement(p_parser);
+    stmt_t * fun_decl_stmt = memory_allocate(sizeof(stmt_t));
+    fun_decl_stmt->type = STMT_FUNCTION;
+    fun_decl_stmt->as.function_stmt.name = p_name;
+    fun_decl_stmt->as.function_stmt.body = body_stmt->as.block_stmt.statements;
+    fun_decl_stmt->as.function_stmt.count = body_stmt->as.block_stmt.count;
+    fun_decl_stmt->as.function_stmt.params = parameters->data;
+    size_t * params_count = memory_allocate(sizeof(size_t));
+    *params_count = parameters->size / sizeof(token_t*);
+    fun_decl_stmt->as.function_stmt.params_count = params_count;
+
+    return fun_decl_stmt;
+}
 static stmt_t * declaration(parser_t * p_parser) {
+    if (token_match(p_parser, 1, FUN)) {
+        return fun_declaration(p_parser, "function");
+    }
     if (token_match(p_parser, 1, VAR)) {
         return var_declaration(p_parser);
     }
