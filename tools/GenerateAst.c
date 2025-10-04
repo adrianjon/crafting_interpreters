@@ -7,84 +7,33 @@
 #include "../extra/Windows.h"
 #include "../extra/Memory.h"
 
-// static const char* types[] = {
-//     "Binary     : Expr left, Token operator, Expr right",
-//     "Grouping   : Expr expression",
-//     "Literal    : Object value",
-//     "Unary      : Token operator, Expr right"
-// };
 static const char* ast_expr_grammar[] = {
-//> Statements and State assign-expr
       "assign   : expr_t* target, expr_t* value",
-//< Statements and State assign-expr
       "binary   : expr_t* left, token_t* operator, expr_t* right",
-//> Functions call-expr
       "call     : expr_t* callee, token_t* paren, expr_t ** arguments, size_t * count",
-//< Functions call-expr
-//> Classes get-ast
       "get      : expr_t* object, token_t* name",
-//< Classes get-ast
       "grouping : expr_t* expression",
       "literal  : token_t* kind",
-//> Control Flow logical-ast
       "logical  : expr_t* left, token_t* operator, expr_t* right",
-//< Control Flow logical-ast
-//> Classes set-ast
       "set      : expr_t* object, token_t* name, expr_t* value",
-//< Classes set-ast
-//> Inheritance super-expr
       "super    : token_t* keyword, token_t* method",
-//< Inheritance super-expr
-//> Classes this-ast
       "this     : token_t* keyword",
-//< Classes this-ast
-/* Representing Code call-define-ast < Statements and State var-expr
-      "Unary    : token_t operator, expr_t right"
-*/
-//> Statements and State var-expr
       "unary    : token_t* operator, expr_t* right",
       "variable : token_t* name",
       NULL
-//< Statements and State var-expr
 };
 
 static const char* ast_stmt_grammar[] = {
-    //> block-ast
-      "block    : stmt_t** statements, size_t* count", //change to c syntax
-//< block-ast
-
-//> Functions function-ast
+      "block    : stmt_t** statements, size_t* count",
       "function   : token_t* name, token_t ** params, size_t * params_count, stmt_t ** body, size_t * count",
-//< Functions function-ast
-
-/* Classes class-ast < Inheritance superclass-ast
-      "Class      : Token name, List<Stmt.Function> methods",
-*/
-//> Inheritance superclass-ast
       "class     : token_t* name, expr_t* superclass, stmt_function_t* methods",
-//< Inheritance superclass-ast
       "expression : expr_t* expression",
-
-//> Control Flow if-ast
       "if         : expr_t* condition, stmt_t* then_branch, stmt_t* else_branch",
-//< Control Flow if-ast
-/* Statements and State stmt-ast < Statements and State var-stmt-ast
-      "Print      : Expr expression"
-*/
-//> var-stmt-ast
       "print     : expr_t* expression",
-//< var-stmt-ast
-//> Functions return-ast
       "return    : token_t* keyword, expr_t* value",
-//< Functions return-ast
-/* Statements and State var-stmt-ast < Control Flow while-ast
-      "Var        : Token name, Expr initializer"
-*/
-//> Control Flow while-ast
       "var        : token_t* name, expr_t* initializer",
       "while      : expr_t* condition, stmt_t* body",
       NULL
-//< Control Flow while-ast
 };
 
 void GenerateAst(const char* output_dir, const char* string_base_name, const char* types[]) {
@@ -95,10 +44,6 @@ void GenerateAst(const char* output_dir, const char* string_base_name, const cha
     append_string(&sb_to_c, "// This file is auto-generated. Do not edit.\n\n");
     append_string(&sb, "#ifndef ");
 
-    //print_int(sb.capacity);
-    //print("\n");
-    //print_int(sb.length);
-    //print("\n");
     char* buffer = string_to_uppercase(string_base_name);
     append_string(&sb, buffer);
     append_string(&sb, "_H\n#define ");
@@ -413,25 +358,5 @@ int main(void) {
       GenerateAst("./lox", "expr", ast_expr_grammar);
       GenerateAst("./lox", "stmt", ast_stmt_grammar);
     region_free(r);
-      // for(int i = 0; ast_expr_grammar[i]; i++) {
-      //     char buffer[20][MAX_TOKEN_LEN] = {0};
-      //     const char* p = (const char*)memory_character(ast_expr_grammar[i], ':', MAX_TOKEN_LEN) + 1; // move past colon
-      //     size_t n = split_string_copy(p, ',', buffer, 20, MAX_TOKEN_LEN);
-      //     for(size_t j = 0; j < n; j++) {
-      //         trim(buffer[j], ' ');
-      //         printf("Field %zu: '%s'\n", j, buffer[j]);
-      //     }
-      //         printf("\n");
-      // }
-      //
-      // int *x = (int*)memory_allocate(10);
-      //       memory_free(&x);
-      // printf("Freed malloced memory at %p\n", x);
-      //
-      // int* p = memory_allocate(sizeof(int) * 10);
-      // printf("Allocated memory at %p\n", p);
-      // printf("Stack address at %p\n", &p);
-      // memory_free((void**)&p);
-      // printf("Freed memory at %p\n", p);
       return 0;
 }

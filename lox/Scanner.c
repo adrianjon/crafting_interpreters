@@ -187,18 +187,6 @@ void scanner_print_tokens(const scanner_t * p_scanner) {
         print("\n");
     }
 }
-void scanner_free(scanner_t * p_scanner) {
-    if (!p_scanner) return;
-    if (p_scanner->tokens->data) {
-        array_free(p_scanner->tokens);
-        p_scanner->tokens->data = NULL;
-        p_scanner->tokens->capacity = 0;
-        p_scanner->tokens->size = 0;
-    }
-    free_file(p_scanner->p_target_file);
-    memory_free((void**)&p_scanner);
-    p_scanner = NULL;
-}
 // Private functions
 static void add_token(const token_type_t type, const char * lexeme, const int line, dynamic_array_t * tokens) {
     token_t token = {.type = type, .line = line};
@@ -247,7 +235,6 @@ static const char * scanner_peek_ptr(const scanner_t * p_scanner) {
 }
 static bool match(scanner_t * p_scanner, const char expected, const char actual) {
     (void) actual;
-    //printf("match: expected '%c', actual '%c'\n", expected, actual);
     if (scanner_is_at_end(p_scanner)) return false;
     if (*p_scanner->p_current != expected) return false;
     p_scanner->p_current++;
@@ -285,18 +272,7 @@ static bool is_alpha(const char c) {
 static bool is_alphanumeric(const char c) {
     return is_alpha(c) || is_digit(c);
 }
-// static token_type_t check_keyword(const scanner_t * p_scanner, const int start, const int length, const char * rest, const token_type_t type) {
-//     if (p_scanner->p_current - p_scanner->p_start == start + length && memory_compare(p_scanner->p_start + start, rest, length) == 0) {
-//         return type;
-//     }
-//     return IDENTIFIER;
-// }
-// static token_type_t identifier_type(scanner_t * p_scanner) {
-//     switch (p_scanner->p_start[0]) {
-//         case 'f': return check_keyword(p_scanner, 1, 2, "un", FUN);
-//         default: return IDENTIFIER;
-//     }
-// }
+
 static void identifier(scanner_t * p_scanner) {
     while (is_alphanumeric(scanner_peek(p_scanner))) scanner_advance(p_scanner);
     //return make_token(identifier_type(p_scanner));

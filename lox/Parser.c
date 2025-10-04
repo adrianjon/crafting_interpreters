@@ -29,12 +29,13 @@
 
     program         -> declaration* EOF ;
     declaration     -> funDecl | varDecl | statement ;
-    statement       -> exprStmt | ifStmt | whileStmt | printStmt | block ;
+    statement       -> exprStmt | ifStmt | whileStmt | printStmt | returnStmt | block ;
     exprStmt        -> expression ";" ;
     ifStmt          -> "if" "(" expression ")" statement
                         ( "else" statement )? ;
     whileStmt       -> "while" "(" expression ")" statement ;
     printStmt       -> "print" expression ";" ;
+    returnStmt      -> "return" expression? ";" ;
     varDecl         -> "var" IDENTIFIER ( "=" expression )? ";" ;
     funDecl         -> "fun" function ;
     function        -> IDENTIFIER "(" parameters? ")" block ;
@@ -81,6 +82,8 @@ static stmt_t * declaration(parser_t * p_parser);
 static stmt_t * parse_block_statement(parser_t * p_parser);
 static stmt_t * parse_if_statement(parser_t * p_parser);
 static stmt_t * parse_while_statement(parser_t * p_parser);
+static stmt_t * parse_return_statement(parser_t * p_parser);
+
 // Public API
 const char* g_expr_type_names[] = {
     "EXPR_ASSIGN",
@@ -139,148 +142,15 @@ dynamic_array_t * parse_statements(parser_t * p_parser) {
     }
     return statements;
 }
-void free_statements(dynamic_array_t * statements) {
-    if (!statements) return;
-    const size_t count = statements->size / sizeof(stmt_t*);
-    for (size_t i = 0; i < count; i++) {
-        free_statement(((stmt_t**)statements->data)[i]);
-    }
-    memory_free(&statements->data);
-    memory_free((void**)&statements);
-}
 token_type_t parser_get_current_token_type(const parser_t * p_parser) {
     const token_t * p_token = (token_t*)p_parser->tokens->data + p_parser->current;
     return p_token->type;
 }
-void parser_free(parser_t * p_parser) {
-    if (!p_parser) return;
-    if (p_parser->tokens) {
-        array_free(p_parser->tokens);
-        p_parser->tokens->data = NULL;
-        p_parser->tokens->capacity = 0;
-        p_parser->tokens->size = 0;
-        //memory_free((void**)&p_parser->tokens);
-    }
-    memory_free((void**)&p_parser);
-    p_parser = NULL;
-}
-// token_t* should point to tokens in the shared parser token buffer. Should NOT be freed here
-void free_expression(expr_t * expr) {
-    if (!expr) return;
-
-    switch (expr->type) {
-        case EXPR_ASSIGN:
-            //memory_free((void**)&expr->as.assign_expr.name);
-            free_expression(expr->as.assign_expr.target);
-            free_expression(expr->as.assign_expr.value);
-            break;
-        case EXPR_BINARY:
-            free_expression(expr->as.binary_expr.left);
-            memory_free((void**)&expr->as.binary_expr.operator);
-            free_expression(expr->as.binary_expr.right);
-            break;
-        case EXPR_CALL:
-            // call expression
-            // free_expression(expr->as.call_expr.callee);
-            // memory_free((void**)&expr->as.call_expr.paren);
-            // // assuming argument dynamic array consists of expressions
-            // const size_t number_of_arguments = expr->as.call_expr.arguments->size / sizeof(expr_t*);
-            // expr_t ** args = expr->as.call_expr.arguments->data;
-            // for (size_t i = 0; i < number_of_arguments; i++) {
-            //     free_expression(args[i]);
-            // }
-            // array_free(expr->as.call_expr.arguments);
-            break;
-        case EXPR_GET:
-            free_expression(expr->as.get_expr.object);
-            break;
-        case EXPR_GROUPING:
-            free_expression(expr->as.grouping_expr.expression);
-            break;
-        case EXPR_LITERAL:
-            // if (expr->as.literal_expr.kind->type == STRING) {
-            //     memory_free((void**)&expr->as.literal_expr.kind->)
-            // }
-            memory_free((void**)&expr->as.literal_expr.kind);
-            break;
-        case EXPR_LOGICAL:
-            free_expression(expr->as.logical_expr.left);
-            memory_free((void**)&expr->as.logical_expr.operator);
-            free_expression(expr->as.logical_expr.right);
-            break;
-        case EXPR_SET:
-            free_expression(expr->as.set_expr.object);
-            free_expression(expr->as.set_expr.value);
-            break;
-        case EXPR_SUPER:
-            //break;
-        case EXPR_THIS:
-            break;
-        case EXPR_UNARY:
-            free_expression(expr->as.unary_expr.right);
-            break;
-        case EXPR_VARIABLE:
-
-            memory_free((void**)&expr->as.variable_expr.name);
-            break;
-        default:
-            break;
-    }
-    memory_free((void**)&expr);
-}
-void free_statement(stmt_t* stmt) {
-    if (!stmt) return;
-    // "STMT_BLOCK",
-    //    "STMT_FUNCTION",
-    //    "STMT_CLASS",
-    //    "STMT_EXPRESSION",
-    //    "STMT_IF",
-    //    "STMT_PRINT",
-    //    "STMT_RETURN",
-    //    "STMT_VAR",
-    //    "STMT_WHILE"
-    switch (stmt->type) {
-        case STMT_BLOCK:
-            for (size_t i = 0; i < *stmt->as.block_stmt.count; i++) {
-                free_statement(stmt->as.block_stmt.statements[i]);
-            }
-            memory_free((void**)&stmt->as.block_stmt.statements);
-            memory_free((void**)&stmt->as.block_stmt.count);
-            break;
-        case STMT_FUNCTION:
-        case STMT_CLASS:
-            // TODO implement this
-            break;
-        case STMT_EXPRESSION:
-            free_expression(stmt->as.expression_stmt.expression);
-            break;
-        case STMT_IF:
-            free_expression(stmt->as.if_stmt.condition);
-            free_statement(stmt->as.if_stmt.then_branch);
-            free_statement(stmt->as.if_stmt.else_branch);
-            break;
-        case STMT_PRINT:
-            free_expression(stmt->as.print_stmt.expression);
-            break;
-        case STMT_RETURN:
-        case STMT_VAR:
-            free_expression(stmt->as.var_stmt.initializer);
-            memory_free((void**)&stmt->as.var_stmt.name);
-            break;
-        case STMT_WHILE:
-            free_expression(stmt->as.while_stmt.condition);
-            free_statement(stmt->as.while_stmt.body);
-            break;
-    }
-    memory_free((void**)&stmt);
-}
 // Private functions
 static expr_t* parse_expression(parser_t* parser) {
-    //      expression     → assignment
     return parse_assignment(parser);
 }
 static expr_t * parse_assignment(parser_t * p_parser) {
-    //      assignment     → IDENTIFIER "=" assignment | equality ;
     expr_t * p_expr = parse_logical_or(p_parser);
     if (token_match(p_parser, 1, EQUAL)) {
 
@@ -297,7 +167,6 @@ static expr_t * parse_assignment(parser_t * p_parser) {
     return p_expr;
 }
 static expr_t * parse_logical_or(parser_t * p_parser) {
-//    logic_or       → logic_and ( "or" logic_and )* ;
     expr_t * p_expr = parse_logical_and(p_parser);
 
     while (token_match(p_parser, 1, OR)) {
@@ -318,7 +187,6 @@ static expr_t * parse_logical_or(parser_t * p_parser) {
     return p_expr;
 }
 static expr_t * parse_logical_and(parser_t * p_parser) {
-//    logic_and      → equality ( "and" equality )* ;
     expr_t * p_expr = parse_equality(p_parser);
 
     while (token_match(p_parser, 1, AND)) {
@@ -339,7 +207,6 @@ static expr_t * parse_logical_and(parser_t * p_parser) {
     return p_expr;
 }
 static expr_t* parse_equality(parser_t* parser) {
-    //    equality       → comparison ( ( "!=" | "==" ) comparison )* ;
     expr_t* expr = parse_comparison(parser);
     while (token_match(parser, 2, BANG_EQUAL, EQUAL_EQUAL)) {
         token_t * operator = memory_allocate(sizeof(token_t));
@@ -357,7 +224,6 @@ static expr_t* parse_equality(parser_t* parser) {
     return expr;
 }
 static expr_t* parse_comparison(parser_t* parser) {
-    //    comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
     expr_t* expr = parse_term(parser);
     while (token_match(parser, 4, LESS, LESS_EQUAL, GREATER, GREATER_EQUAL)) {
         token_t * operator = memory_allocate(sizeof(token_t));
@@ -375,7 +241,6 @@ static expr_t* parse_comparison(parser_t* parser) {
     return expr;
 }
 static expr_t* parse_term(parser_t* parser) {
-    // term           → factor ( ( "-" | "+" ) factor )* ;
     expr_t* expr = parse_factor(parser);
     while (token_match(parser, 2, MINUS, PLUS)) {
         token_t * operator = memory_allocate(sizeof(token_t));
@@ -393,7 +258,6 @@ static expr_t* parse_term(parser_t* parser) {
     return expr;
 }
 static expr_t* parse_factor(parser_t* parser) {
-    // factor         → unary ( ( "/" | "*" | "%" ) unary )* ;
     expr_t* expr = parse_unary(parser);
     while (token_match(parser, 3, SLASH, STAR, PERCENTAGE)) {
         token_t * operator = memory_allocate(sizeof(token_t));
@@ -411,8 +275,6 @@ static expr_t* parse_factor(parser_t* parser) {
     return expr;
 }
 static expr_t* parse_unary(parser_t* parser) {
-    // unary          → ( "!" | "-" ) unary
-    //                | primary ;
     if (token_match(parser, 2, BANG, MINUS)) {
         token_t* operator = token_previous_ptr(parser);
         expr_t* right = parse_unary(parser);
@@ -450,7 +312,6 @@ static expr_t * finish_call(parser_t * p_parser, expr_t * callee) {
     return expr;
 }
 static expr_t * parse_call(parser_t * p_parser) {
-    // call           → primary ( "(" arguments? ")" ) ;
     expr_t * expr = parse_primary(p_parser);
 
     if (token_match(p_parser, 1, LEFT_PAREN)) {
@@ -459,8 +320,6 @@ static expr_t * parse_call(parser_t * p_parser) {
     return expr;
 }
 static expr_t* parse_primary(parser_t* parser) {
-    // primary        → NUMBER | STRING | "true" | "false" | "nil"
-    //                | "(" expression ")" | IDENTIFIER ;
     if (token_match(parser, 5, NUMBER, STRING, KW_TRUE, KW_FALSE, NIL)) {
         const token_t* number_token = token_previous_ptr(parser);
         expr_t* expr = memory_allocate(sizeof(expr_t));
@@ -558,6 +417,7 @@ static stmt_t * print_statement(parser_t * p_parser) {
     print_stmt->as.print_stmt.expression = expr;
     return print_stmt;
 }
+
 static stmt_t * expression_statement(parser_t * p_parser) {
     expr_t* expr = parse_expression(p_parser);
     consume(p_parser, SEMICOLON, "Expected ';' after expression.");
@@ -615,8 +475,19 @@ static stmt_t * fun_declaration(parser_t * p_parser, const char * kind) {
     stmt_t * fun_decl_stmt = memory_allocate(sizeof(stmt_t));
     fun_decl_stmt->type = STMT_FUNCTION;
     fun_decl_stmt->as.function_stmt.name = p_name;
-    fun_decl_stmt->as.function_stmt.body = body_stmt->as.block_stmt.statements;
-    fun_decl_stmt->as.function_stmt.count = body_stmt->as.block_stmt.count;
+
+    size_t * p_n = memory_allocate(sizeof(size_t));
+    *p_n = *body_stmt->as.block_stmt.count;
+    fun_decl_stmt->as.function_stmt.body = memory_allocate(*p_n * sizeof(stmt_t*));
+    for (size_t i = 0; i < *p_n; i++) {
+        fun_decl_stmt->as.function_stmt.body[i] =
+            body_stmt->as.block_stmt.statements[i];
+    }
+    fun_decl_stmt->as.function_stmt.count = p_n;
+
+    // fun_decl_stmt->as.function_stmt.body = body_stmt->as.block_stmt.statements;
+    // fun_decl_stmt->as.function_stmt.count = body_stmt->as.block_stmt.count;
+
     fun_decl_stmt->as.function_stmt.params = parameters->data;
     size_t * params_count = memory_allocate(sizeof(size_t));
     *params_count = parameters->size / sizeof(token_t*);
@@ -642,6 +513,9 @@ static stmt_t * statement(parser_t * p_parser) {
     }
     if (token_match(p_parser, 1, PRINT)) {
         return print_statement(p_parser);
+    }
+    if (token_match(p_parser, 1, RETURN)) {
+        return parse_return_statement(p_parser);
     }
     if (token_match(p_parser, 1, LEFT_BRACE)) {
         return parse_block_statement(p_parser);
@@ -701,4 +575,16 @@ static stmt_t * parse_while_statement(parser_t * p_parser) {
 
     return while_stmt;
 }
-
+static stmt_t * parse_return_statement(parser_t * p_parser) {
+    stmt_t * return_stmt = memory_allocate(sizeof(stmt_t));
+    return_stmt->type = STMT_RETURN;
+    token_t * p_keyword = token_previous_ptr(p_parser);
+    expr_t * p_expression = NULL;
+    if (!token_check(p_parser, ';')) {
+        p_expression = parse_expression(p_parser);
+    }
+    consume(p_parser, SEMICOLON, "Expected ';' after return value.");
+    return_stmt->as.return_stmt.value = p_expression;
+    return_stmt->as.return_stmt.keyword = p_keyword;
+    return return_stmt;
+}

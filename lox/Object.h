@@ -9,6 +9,7 @@
 // Forward declarations
 typedef struct object object_t;
 
+extern const char* g_object_type_names[];
 // Object types
 typedef enum {
     OBJECT_STRING,
@@ -21,7 +22,6 @@ typedef enum {
 
 // API
 object_t * new_object(object_type_t p_object_type, void * value);
-void object_free(object_t ** p_object);
 object_type_t get_object_type (const object_t * p_object);
 void set_object_type (object_t * p_object, object_type_t p_object_type);
 char * get_object_string (const object_t * p_object);

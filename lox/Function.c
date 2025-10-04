@@ -28,11 +28,12 @@ object_t * call_function(const function_t * p_function, interpreter_t * p_interp
         declare_variable(p_env, p_function->p_declaration->params[i]->lexeme, pp_arguments[i]);
     }
 
+    object_t * p_ret = NULL;
     // TODO fix this, p_function->p_declaration->body pointer is garbage
+    // assume return is last statement
     for (size_t i = 0; i < *p_function->p_declaration->count; i++) {
-        execute(p_function->p_declaration->body[i], p_interpreter);
+        p_ret = execute(p_function->p_declaration->body[i], p_interpreter);
     }
     set_interpreter_environment(p_interpreter, p_parent_env);
-    free_environment(p_env);
-    return NULL;
+    return p_ret;
 }

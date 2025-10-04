@@ -5,19 +5,15 @@
 #include "Environment.h"
 
 #include "../extra/Memory.h"
+#include "../lox/Object.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
-
 // Private functions
 
-
 // Forward declarations
-value_t lox_clock(int argc, value_t * args);
-
-
 
 // new implementation
 struct environment {
@@ -28,33 +24,19 @@ struct environment {
         object_t * object;
     } variables[MAX_VARS];
 };
+bool assign_variable(environment_t * p_env, const char * p_name, object_t * p_object) {
 
-// only in local scope
-// void assign_variable(environment_t * p_env, const char * p_name, const value_t * p_val) {
-//     value_t * x = env_lookup(p_env, p_name);
-//     if (x) {
-//         // overwriting exisitng value
-//         if (x->type == VAL_STRING) {
-//             memory_free((void**)&x->as.string);
-//         }
-//         // free old value TODO fix bug here
-//         // memory_free((void**)&x);
-//
-//         if (p_val->type == VAL_STRING) {
-//             x->type = VAL_STRING;
-//             x->as.string = memory_allocate(strlen(p_val->as.string) + 1);
-//             if (!memory_copy(x->as.string, p_val->as.string, strlen(p_val->as.string) + 1)) {
-//                 fprintf(stderr, "Memory allocation error");
-//                 exit(EXIT_FAILURE);
-//             }
-//         } else {
-//             *x = *p_val;
-//         }
-//
-//     } else {
-//         declare_variable(p_env, p_name, p_val);
-//     }
-// }
+    for (size_t i = 0; i < p_env->variable_count; i++) {
+        if (memory_compare(p_name, p_env->variables[i].name, strlen(p_name))) {
+            p_env->variables[i].object = p_object;
+            return true;
+        }
+    }
+    if (p_env->parent_environment) {
+        return assign_variable(p_env->parent_environment, p_name, p_object);
+    }
+    return false;
+}
 bool declare_variable(environment_t * p_env, const char * p_name,
     const object_t * p_object) {
     if (p_env->variable_count < MAX_VARS) {
@@ -83,14 +65,6 @@ object_t * env_lookup(environment_t* p_env, const char* p_name) {
     }
     return NULL; // Not found
 }
-void free_environment(environment_t * p_env) {
-    for (size_t i = 0; i < p_env->variable_count; ++i) {
-        memory_free((void**)(&p_env->variables[i].name));
-        //object_free(&p_env->variables[i].object);
-    }
-    p_env->variable_count = 0;
-    memory_free((void**)&p_env);
-}
 environment_t * create_environment(environment_t * p_parent_env) {
     environment_t * p_env = memory_allocate(sizeof(environment_t));
     p_env->parent_environment = p_parent_env;
@@ -104,40 +78,3 @@ environment_t * create_environment(environment_t * p_parent_env) {
 environment_t * get_parent_environment(const environment_t * p_env) {
     return p_env->parent_environment;
 }
-// static value_t make_native(value_t (*native_fn)(int argc, value_t * args)) {
-//     value_t v;
-//     v.type = VAL_FUNCTION;
-//     v.as.function = native_fn;
-//     v.is_on_heap = false;
-//     return v;
-// }
-// struct {
-//     const char * name;
-//     value_t (*native_fn)(int argc, value_t * args);
-// } g_native_functions[] = {
-//     { .name = "lox_clock", lox_clock },
-// };
-// environment_t * init_global_scope(void) {
-//     environment_t * p_env = memory_allocate(sizeof(environment_t));
-//     p_env->parent_environment = NULL;
-//     p_env->variable_count = 0;
-//     for (size_t i = 0; i < MAX_VARS; ++i) {
-//         p_env->variables[i].name = NULL;
-//         p_env->variables[i].value = (value_t){0};
-//     }
-//     for (size_t i = 0; i < sizeof(g_native_functions) / sizeof(g_native_functions[0]); i++) {
-//         value_t v = make_native(g_native_functions[i].native_fn);
-//         declare_variable(p_env, g_native_functions[i].name, &v);
-//     }
-//     return p_env;
-// }
-
-// Global lox native functions
-// value_t lox_clock(int argc, value_t * args) {
-//     (void)argc; (void)args;
-//     value_t v;
-//     v.type = VAL_NUMBER;
-//     v.as.number = (double)time(NULL);
-//     v.is_on_heap = true;
-//     return v;
-// }

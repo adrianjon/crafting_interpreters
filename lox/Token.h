@@ -61,9 +61,5 @@ typedef struct {
 } token_t;
 
 token_t * new_token(token_type_t type, char lexeme[], int line);
-// void token_free(token_t * token) {
-//     memory_free((void**)&token->lexeme);
-//     memory_free((void**)&token);
-// }
 
 #endif //LOX_TOKEN_H

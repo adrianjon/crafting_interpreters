@@ -5,7 +5,7 @@
 #ifndef LOX_ENVIRONMENT_H
 #define LOX_ENVIRONMENT_H
 
-#include "ast_interpreter.h"
+#include "Object.h"
 
 typedef struct environment environment_t;
 #define MAX_GLOBALS 128
@@ -21,6 +21,5 @@ environment_t * get_parent_environment(const environment_t * p_env);
 bool assign_variable(environment_t * p_env, const char * p_name, object_t * p_object);
 bool declare_variable(environment_t * p_env, const char * p_name, const object_t * p_object);
 object_t * env_lookup(environment_t * p_env, const char * p_name);
-void free_environment(environment_t * p_env);
 
 #endif //LOX_ENVIRONMENT_H

@@ -10,6 +10,15 @@
 #include "../extra/Memory.h"
 #include "Function.h"
 
+const char* g_object_type_names[] = {
+    "OBJECT_STRING",
+    "OBJECT_NUMBER",
+    "OBJECT_BOOLEAN",
+    "OBJECT_NATIVE",
+    "OBJECT_FUNCTION",
+    "OBJECT_NIL",
+};
+
 struct object {
     object_type_t type;
     union {
@@ -58,26 +67,8 @@ object_t * new_object(const object_type_t p_object_type, void * value) {
     }
     return p_object;
 }
-void object_free(object_t ** p_object) {
-    switch ((*p_object)->type) {
-        case OBJECT_STRING:
-            memory_free((void**)&(*p_object)->as.string.value);
-            break;
-        case OBJECT_NUMBER:
-        case OBJECT_BOOLEAN:
-            break;
-        case OBJECT_NATIVE:
-            memory_free((void**)&(*p_object)->as.native.name);
-            break;
-        case OBJECT_FUNCTION:
-            memory_free(&(*p_object)->as.function.p_function);
-            break;
-        default:
-            break;
-    }
-    memory_free((void**)p_object);
-}
 object_type_t get_object_type (const object_t * p_object) {
+    if (!p_object) return OBJECT_NIL;
     return p_object->type;
 }
 void set_object_type (object_t * p_object, const object_type_t p_object_type) {

@@ -1,4 +1,19 @@
-fun add(x, y) {
-    print x + y;
+fun loop(x, y) {
+    var i = 0;
+    while (i < x) {
+        print i;
+        print y;
+        i = i + 1;
+    }
 }
-add(5, 3);
+fun makeCounter() {
+    var i = 0;
+    fun count() {
+        i = i + 1;
+        print i;
+    }
+    return count;
+}
+var counter = makeCounter();
+//counter();
+//counter();
