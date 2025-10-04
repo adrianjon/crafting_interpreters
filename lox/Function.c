@@ -8,11 +8,14 @@
 
 struct function {
     stmt_function_t * p_declaration;
+    environment_t * closure;
 };
 
-function_t * new_function(stmt_function_t * p_declaration) {
+function_t * new_function(stmt_function_t * p_declaration, environment_t * closure) {
     function_t * p_new = memory_allocate(sizeof(function_t));
     p_new->p_declaration = p_declaration;
+    // should clone the environment as the funciton closure
+    p_new->closure = copy_environment(closure);
     return p_new;
 }
 stmt_function_t * get_function_declaration(const function_t * p_function) {
@@ -21,7 +24,7 @@ stmt_function_t * get_function_declaration(const function_t * p_function) {
 object_t * call_function(const function_t * p_function, interpreter_t * p_interpreter,
     object_t ** pp_arguments) {
     environment_t * p_parent_env = get_interpreter_environment(p_interpreter);
-    environment_t * p_env = create_environment(p_parent_env);
+    environment_t * p_env = create_environment(p_function->closure);
     set_interpreter_environment(p_interpreter, p_env);
 
     for (size_t i = 0; i < *p_function->p_declaration->params_count; i++) {

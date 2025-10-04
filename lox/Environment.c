@@ -78,3 +78,10 @@ environment_t * create_environment(environment_t * p_parent_env) {
 environment_t * get_parent_environment(const environment_t * p_env) {
     return p_env->parent_environment;
 }
+environment_t * copy_environment(environment_t * p_env) {
+    if (!p_env) return NULL;
+    environment_t * p_env_copy = memory_allocate(sizeof(environment_t));
+    memory_copy(p_env_copy, p_env, sizeof(environment_t));
+    p_env_copy->parent_environment = copy_environment(p_env->parent_environment);
+    return p_env_copy;
+}

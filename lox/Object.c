@@ -107,8 +107,8 @@ void * copy_object_value( const object_t * p_object) {
             break;
         case OBJECT_NATIVE:
             break;
-        case OBJECT_FUNCTION:
-            p_value = new_function(get_function_declaration(p_object->as.function.p_function));
+        case OBJECT_FUNCTION: // no deep copy of function
+            p_value = p_object->as.function.p_function;//new_function(get_function_declaration(p_object->as.function.p_function), NULL);
             break;
         default:
             break;

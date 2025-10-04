@@ -257,7 +257,7 @@ static void * visit_call_expr(const expr_t * p_expr, void * p_ctx) {
         arguments[i] = evaluate(expr.arguments[i], p_ctx);
         check_runtime_error(p_ctx);
     }
-
+    //object_t * p_return =
     void * p_return = call_function(get_object_function(callee), p_ctx, arguments);
     return p_return;
 }
@@ -363,7 +363,7 @@ static void * visit_function_stmt(const stmt_t * p_stmt, void * p_ctx) {
     stmt->params_count  = p_stmt->as.function_stmt.params_count;
 
 
-    function_t * p_function = new_function(stmt);
+    function_t * p_function = new_function(stmt, ((interpreter_t*)p_ctx)->p_current_env);
     const object_t * p_object = new_object(OBJECT_FUNCTION, p_function);
     declare_variable(((interpreter_t*)p_ctx)->p_current_env, stmt->name->lexeme, p_object);
     return NULL;

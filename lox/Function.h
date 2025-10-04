@@ -11,7 +11,7 @@
 
 typedef struct function function_t;
 
-function_t * new_function(stmt_function_t * p_declaration);
+function_t * new_function(stmt_function_t * p_declaration, environment_t * closure);
 stmt_function_t * get_function_declaration(const function_t * p_function);
 object_t * call_function(const function_t * p_function, interpreter_t * p_interpreter,
     object_t ** pp_arguments);

@@ -21,5 +21,6 @@ environment_t * get_parent_environment(const environment_t * p_env);
 bool assign_variable(environment_t * p_env, const char * p_name, object_t * p_object);
 bool declare_variable(environment_t * p_env, const char * p_name, const object_t * p_object);
 object_t * env_lookup(environment_t * p_env, const char * p_name);
+environment_t * copy_environment(environment_t * p_env);
 
 #endif //LOX_ENVIRONMENT_H
