@@ -123,7 +123,7 @@ static void resolve_expr(const expr_t * p_expr, resolver_t * p_resolver) {
 }
 
 static void begin_scope(const resolver_t * p_resolver) {
-    stack_push(p_resolver->scopes, map_create(8, NULL, NULL, NULL));
+    stack_push(p_resolver->scopes, map_create(8, NULL, NULL, NULL, NULL));
 }
 static void end_scope(const resolver_t * p_resolver) {
     stack_pop(p_resolver->scopes);
@@ -149,12 +149,12 @@ static void resolve_function(const stmt_function_t stmt, resolver_t * p_resolver
     }
     end_scope(p_resolver);
 }
-static void resolve_local(expr_t * p_expr, token_t * p_token, resolver_t * p_resolver) {
+static void resolve_local( const expr_t * p_expr, const token_t * p_token, const resolver_t * p_resolver) {
     for (int i = (int)stack_size(p_resolver->scopes) - 1; i >= 0; i--) {
-        map_t * scope = (map_t*)p_resolver->scopes->data[i];
+        const map_t * scope = (map_t*)p_resolver->scopes->data[i];
         if (map_contains(scope, p_token->lexeme)) {
-            int distance = (int)stack_size(p_resolver->scopes) - 1 - i;
-            interpreter_resolve(p_expr, distance);
+            const int distance = (int)stack_size(p_resolver->scopes) - 1 - i;
+            interpreter_resolve(p_expr, distance, p_resolver->p_interpreter);
             return;
         }
     }
@@ -162,8 +162,9 @@ static void resolve_local(expr_t * p_expr, token_t * p_token, resolver_t * p_res
 }
 // Visitor implementations
 static void * visit_assign_expr(const expr_t * p_expr, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented expression: %s (%d)",
-        g_expr_type_names[p_expr->type], p_expr->type);
+    const expr_assign_t expr = p_expr->as.assign_expr;
+    resolve_expr(expr.value, p_ctx);
+    resolve_local(expr.target, expr.target->as.variable_expr.name, p_ctx);
     return NULL;
 }
 static void * visit_binary_expr(const expr_t * p_expr, void * p_ctx) {
@@ -227,7 +228,7 @@ static void * visit_variable_expr(const expr_t * p_expr, void * p_ctx) {
         !map_get(scope, expr.name->lexeme)) {
         throw_error(p_resolver, "Can't read local variable in its own initializer.");
     }
-    //resolve_local();
+    resolve_local(p_expr, expr.name, p_resolver);
     return NULL;
 }
 

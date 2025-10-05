@@ -20,8 +20,11 @@ static void clean_string(const void * key, const void * value) {
     (void)value;
     free((void *)key);
 }
+static const void * copy_string(const void * key) {
+    return strdup(key);
+}
 map_t *map_create(const size_t num_buckets, const map_hash_fn_t hash,
-                    const map_cmp_fn_t cmp, const map_clean_fn_t clean) {
+        const map_cmp_fn_t cmp, const map_clean_fn_t clean, const map_copy_fn_t copy) {
     map_t *map = malloc(sizeof(map_t));
     if (!map) return NULL;
     map->buckets = calloc(num_buckets, sizeof(map_entry_t*));
@@ -34,6 +37,7 @@ map_t *map_create(const size_t num_buckets, const map_hash_fn_t hash,
     map->hash = hash ? hash : hash_string;
     map->cmp = cmp ? cmp : cmp_string;
     map->clean = clean ? clean : clean_string;
+    map->copy = copy ? copy : copy_string;
     return map;
 }
 
@@ -65,7 +69,7 @@ bool map_put(map_t * map, const void * key, void * value) {
     // Not found: add new entry
     entry = malloc(sizeof(map_entry_t));
     if (!entry) return false;
-    entry->key = key;
+    entry->key = map->copy(key);
     entry->value = value;
     entry->next = map->buckets[index];
     map->buckets[index] = entry;
@@ -107,4 +111,15 @@ bool map_remove(map_t * map, const void * key) {
 
 size_t map_size(const map_t * map) {
     return map->size;
+}
+bool map_contains(const map_t * map, const void * key) {
+    const size_t index = map->hash(key, map->num_buckets);
+    const map_entry_t *entry = map->buckets[index];
+    while (entry) {
+        if (map->cmp(entry->key, key)) {
+            return true;
+        }
+        entry = entry->next;
+    }
+    return false;
 }

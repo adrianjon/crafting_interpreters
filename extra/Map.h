@@ -36,6 +36,7 @@ typedef struct map_entry {
 typedef size_t (*map_hash_fn_t)(const void * key, size_t num_buckets);
 typedef bool (*map_cmp_fn_t)(const void * key1, const void * key2);
 typedef void (*map_clean_fn_t)(const void * key, const void * value);
+typedef const void * (*map_copy_fn_t)(const void * key);
 
 typedef struct {
     map_entry_t **buckets;
@@ -44,10 +45,12 @@ typedef struct {
     map_hash_fn_t hash;
     map_cmp_fn_t cmp;
     map_clean_fn_t clean;
+    map_copy_fn_t copy;
 } map_t;
 
 //map_t *map_create(size_t num_buckets);
-map_t *map_create(size_t num_buckets, map_hash_fn_t hash, map_cmp_fn_t cmp, map_clean_fn_t clean);
+map_t *map_create(size_t num_buckets, map_hash_fn_t hash, map_cmp_fn_t cmp,
+    map_clean_fn_t clean, map_copy_fn_t copy);
 
 void map_destroy(map_t *map);
 

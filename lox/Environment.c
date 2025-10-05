@@ -5,7 +5,8 @@
 #include "Environment.h"
 
 #include "../extra/Memory.h"
-#include "../lox/Object.h"
+#include "../extra/Map.h"
+#include "Object.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,11 +20,26 @@
 struct environment {
     environment_t * parent_environment;
     size_t variable_count;
+    map_t * values;
     struct {
         char * name;
         object_t * object;
     } variables[MAX_VARS];
 };
+
+static size_t hash_expr(const void * key, const size_t num_buckets) {
+    return (size_t)key % num_buckets;
+}
+static bool cmp_expr(const void * key1, const void * key2) {
+    return key1 == key2;
+}
+static void clean_expr(const void * key, const void * value) {
+    (void)key, (void)value;
+}
+static const void * copy_expr(const void * key) {
+    return key;
+}
+
 bool assign_variable(environment_t * p_env, const char * p_name, object_t * p_object) {
 
     for (size_t i = 0; i < p_env->variable_count; i++) {
@@ -68,6 +84,8 @@ object_t * env_lookup(environment_t* p_env, const char* p_name) {
 environment_t * create_environment(environment_t * p_parent_env) {
     environment_t * p_env = memory_allocate(sizeof(environment_t));
     p_env->parent_environment = p_parent_env;
+    // values is a map of type <char*, object_t*> keys are owned, values not
+    p_env->values = map_create(4, NULL, NULL, NULL, NULL);
     p_env->variable_count = 0;
     for (size_t i = 0; i < MAX_VARS; ++i) {
         p_env->variables[i].name = NULL;
@@ -84,4 +102,15 @@ environment_t * copy_environment(environment_t * p_env) {
     memory_copy(p_env_copy, p_env, sizeof(environment_t));
     p_env_copy->parent_environment = copy_environment(p_env->parent_environment);
     return p_env_copy;
+}
+environment_t *ancestor(const int distance, environment_t * p_env) {
+    for (int i = 0; i < distance; i++) {
+        p_env = p_env->parent_environment;
+    }
+    return p_env;
+}
+object_t * get_at(const int distance, const char * name, environment_t * p_env) {
+    environment_t * env = ancestor(distance, p_env);
+    if (!env) return NULL;
+    return map_get(env->values, name);
 }

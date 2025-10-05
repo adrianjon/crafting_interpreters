@@ -60,6 +60,9 @@ bool cmp_expr(const void * key1, const void * key2) {
 void clean_expr(const void * key, const void * value) {
     (void)key, (void)value;
 }
+const void * copy_expr(const void * key) {
+    return key;
+}
 // Public API
 interpreter_t * new_interpreter(void) {
     interpreter_t * p_interpreter = memory_allocate(sizeof(interpreter_t));
@@ -68,7 +71,7 @@ interpreter_t * new_interpreter(void) {
         return NULL;
     }
     p_interpreter->p_current_env = create_environment(NULL);
-    p_interpreter->locals = map_create(8, hash_expr, cmp_expr, clean_expr);
+    p_interpreter->locals = map_create(8, hash_expr, cmp_expr, clean_expr, copy_expr);
     p_interpreter->expr_visitor.visit_assign        = visit_assign_expr;
     p_interpreter->expr_visitor.visit_binary        = visit_binary_expr;
     p_interpreter->expr_visitor.visit_call          = visit_call_expr;
@@ -163,7 +166,14 @@ bool is_truthy(const object_t * p_obj) {
         default: return false;
     }
 }
+object_t * lookup_variable(token_t * p_name, expr_t * p_expr, interpreter_t * p_interpreter) {
+    int distance = (int)map_get(p_interpreter->locals, p_expr);
+    if (distance > 0) {
+        return get_at_environment();
+    } else {
 
+    }
+}
 // Private visitor functions
 static void * visit_assign_expr(const expr_t * p_expr, void * p_ctx) {
     const expr_assign_t expr = p_expr->as.assign_expr;
@@ -356,14 +366,15 @@ static void * visit_unary_expr(const expr_t * p_expr, void * p_ctx) {
 }
 static void * visit_variable_expr(const expr_t * p_expr, void * p_ctx) {
     const expr_variable_t expr = p_expr->as.variable_expr;
-    object_t * result = env_lookup(((interpreter_t*)p_ctx)->p_current_env, expr.name->lexeme);
-    if (result) {
-
-    } else {
-        throw_error(p_ctx, "Undefined variable '%s' at line %d",
-        expr.name->lexeme, expr.name->line);
-    }
-    return result;
+    return lookup_variable(expr.name, p_expr);
+    // object_t * result = env_lookup(((interpreter_t*)p_ctx)->p_current_env, expr.name->lexeme);
+    // if (result) {
+    //
+    // } else {
+    //     throw_error(p_ctx, "Undefined variable '%s' at line %d",
+    //     expr.name->lexeme, expr.name->line);
+    // }
+    // return result;
 }
 static void * visit_block_stmt(const stmt_t * p_stmt, void * p_ctx) {
     const stmt_block_t stmt = p_stmt->as.block_stmt;
