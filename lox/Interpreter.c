@@ -207,6 +207,24 @@ static void * visit_binary_expr(const expr_t * p_expr, void * p_ctx) {
                     expr.operator->lexeme);
             }
             break;
+        case SLASH:
+            if (get_object_type(left) == OBJECT_NUMBER &&
+                     get_object_type(right) == OBJECT_NUMBER) {
+                const double numerator = get_object_number(left);
+                const double denominator = get_object_number(right);
+                if (denominator == 0) {
+                    throw_error(p_ctx, "Division by zero at line %d", expr.operator->line);
+                    result = NULL;
+                    break;
+                }
+                double product = get_object_number(left) / get_object_number(right);
+                result = new_object(OBJECT_NUMBER, &product);
+                     } else {
+                         result = NULL;
+                         throw_error(p_ctx, "Invalid operand types for operator: %s",
+                             expr.operator->lexeme);
+                     }
+            break;
         case GREATER:
             if (get_object_type(left) == OBJECT_NUMBER &&
                     get_object_type(right) == OBJECT_NUMBER) {

@@ -9,3 +9,9 @@ var a = "global";
     var a = "block";
     showA();
 }
+var x = 0;
+while (x < 401) {
+    print x;
+    x = x + 1;
+}
+print 10 / 0;

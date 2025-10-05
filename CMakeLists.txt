@@ -18,6 +18,12 @@ add_executable(lox main.c
         lox/Environment.c
         lox/Interpreter.c
         lox/Function.c
+        lox/Resolver.c
+        lox/Resolver.h
+        extra/Map.c
+        extra/Map.h
+        extra/Stack.c
+        extra/Stack.h
 )
 
 add_executable(GenerateAst tools/GenerateAst.c
