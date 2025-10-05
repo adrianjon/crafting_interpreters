@@ -1,22 +1,3 @@
-var temp = a;
-var a;
-a = temp;
-/*
-var a = "global";
-{
-    fun showA() {
-        print a;
-    }
-    showA();
-    a = "poop";
-    showA();
-    var a = "block";
-    showA();
-}
-var x = 0;
-while (x < 401) {
-    print x;
-    x = x + 1;
-}
-print 10 / 0;
-*/
+var x = "hello";
+//x = "hello";
+print x;

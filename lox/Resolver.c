@@ -128,9 +128,13 @@ static void begin_scope(const resolver_t * p_resolver) {
 static void end_scope(const resolver_t * p_resolver) {
     stack_pop(p_resolver->scopes);
 }
-static void declare(const token_t * p_name, const resolver_t * p_resolver) {
+static void declare(const token_t * p_name, resolver_t * p_resolver) {
     if (stack_is_empty(p_resolver->scopes)) return;
     map_t * scope = stack_peek(p_resolver->scopes);
+    if (map_contains(scope, p_name->lexeme)) {
+        throw_error(p_resolver, "[line %d] Already a variable named '%s' in this scope.",
+            p_name->line, p_name->lexeme);
+    }
     map_put(scope, p_name->lexeme, false);
 }
 static void define(const token_t * p_name, const  resolver_t * p_resolver) {

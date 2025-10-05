@@ -6,22 +6,17 @@
 #define LOX_ENVIRONMENT_H
 
 #include "Object.h"
+#include "Token.h"
 
 typedef struct environment environment_t;
 #define MAX_GLOBALS 128
 #define MAX_VARS 128
 
-// void set_global(const char * name, value_t * value);
-// value_t * get_global(const char * name);
-// void free_globals(void);
-
-environment_t * init_global_scope(void);
-environment_t * create_environment(environment_t * p_parent_env);
-environment_t * get_parent_environment(const environment_t * p_env);
-bool assign_variable(environment_t * p_env, const char * p_name, object_t * p_object);
-bool declare_variable(environment_t * p_env, const char * p_name, const object_t * p_object);
-object_t * env_lookup(environment_t * p_env, const char * p_name);
-environment_t * copy_environment(environment_t * p_env);
-environment_t *ancestor(int distance, environment_t * p_env);
-object_t * get_at(int distance, const char * name, environment_t * p_env);
+environment_t * new_environment(environment_t * p_enclosing);
+object_t * environment_get(token_t * p_name, environment_t * p_env);
+void environment_assign(token_t * p_name, object_t * p_value, environment_t * p_env);
+void environment_define(const char * p_name, object_t * p_value, const environment_t * p_env);
+environment_t * environment_ancestor(int distance, environment_t * p_env);
+object_t * environment_get_at(int distance, const char * name, environment_t * p_env);
+void environment_assign_at(int distance, const token_t * p_name, object_t * p_value, environment_t * p_env);
 #endif //LOX_ENVIRONMENT_H

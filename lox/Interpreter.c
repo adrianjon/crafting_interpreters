@@ -16,7 +16,8 @@
 #include "../extra/Map.h"
 
 struct interpreter {
-    environment_t * p_current_env;
+    environment_t * globals;
+    environment_t * environment;
     map_t * locals;
     expr_visitor_t expr_visitor;
     stmt_visitor_t stmt_visitor;
@@ -70,7 +71,8 @@ interpreter_t * new_interpreter(void) {
         fprintf(stderr, "Failed to create Interpreter\n");
         return NULL;
     }
-    p_interpreter->p_current_env = create_environment(NULL);
+    p_interpreter->globals = new_environment(NULL);
+    p_interpreter->environment = p_interpreter->globals;
     p_interpreter->locals = map_create(8, hash_expr, cmp_expr, clean_expr, copy_expr);
     p_interpreter->expr_visitor.visit_assign        = visit_assign_expr;
     p_interpreter->expr_visitor.visit_binary        = visit_binary_expr;
@@ -114,10 +116,10 @@ void * execute(const stmt_t * p_stmt, interpreter_t * p_interpreter) {
     return stmt_accept(p_stmt, &p_interpreter->stmt_visitor, p_interpreter);
 }
 environment_t * get_interpreter_environment(const interpreter_t * p_interpreter) {
-    return p_interpreter->p_current_env;
+    return p_interpreter->environment;
 }
 void set_interpreter_environment(interpreter_t * p_interpreter, environment_t * p_env) {
-    p_interpreter->p_current_env = p_env;
+    p_interpreter->environment = p_env;
 }
 void interpreter_resolve(const expr_t * p_expr, const int depth, const interpreter_t * p_interpreter) {
     map_put(p_interpreter->locals, p_expr, (void*)(intptr_t)depth);
@@ -166,24 +168,26 @@ bool is_truthy(const object_t * p_obj) {
         default: return false;
     }
 }
-object_t * lookup_variable(token_t * p_name, expr_t * p_expr, interpreter_t * p_interpreter) {
-    int distance = (int)map_get(p_interpreter->locals, p_expr);
-    if (distance > 0) {
-        return get_at_environment();
-    } else {
-
+object_t * lookup_variable(token_t * p_name, const expr_t * p_expr, const interpreter_t * p_interpreter) {
+    const int distance = (int)map_get(p_interpreter->locals, p_expr);
+    if (distance >= 0) {
+        return environment_get_at(distance, p_name->lexeme, p_interpreter->environment);
     }
+    return environment_get(p_name, p_interpreter->globals);
 }
 // Private visitor functions
 static void * visit_assign_expr(const expr_t * p_expr, void * p_ctx) {
     const expr_assign_t expr = p_expr->as.assign_expr;
     interpreter_t * p_interpreter = p_ctx;
     object_t * p_value  = evaluate(expr.value, p_interpreter);
-    if (!assign_variable(get_interpreter_environment(p_interpreter),
-                            expr.target->as.variable_expr.name->lexeme,
-                            p_value)) {
-        throw_error(p_interpreter, "Failed to assign value '%s' to variable '%s'",
-            stringify(p_value), expr.target->as.variable_expr.name->lexeme);
+    check_runtime_error(p_ctx);
+    const int distance = (int)map_get(p_interpreter->locals, p_expr);
+    if (distance >= 0) {
+        environment_assign_at(distance, expr.target->as.variable_expr.name,
+            p_value, p_interpreter->environment);
+    } else {
+        environment_assign(p_expr->as.variable_expr.name,
+            p_value, p_interpreter->globals);
     }
     return p_value;
 }
@@ -301,7 +305,7 @@ static void * visit_call_expr(const expr_t * p_expr, void * p_ctx) {
         check_runtime_error(p_ctx);
     }
     //object_t * p_return =
-    void * p_return = call_function(get_object_function(callee), p_ctx, arguments);
+    void * p_return = function_call(get_object_function(callee), p_ctx, arguments);
     return p_return;
 }
 static void * visit_get_expr(const expr_t * p_expr, void * p_ctx) {
@@ -366,25 +370,20 @@ static void * visit_unary_expr(const expr_t * p_expr, void * p_ctx) {
 }
 static void * visit_variable_expr(const expr_t * p_expr, void * p_ctx) {
     const expr_variable_t expr = p_expr->as.variable_expr;
-    return lookup_variable(expr.name, p_expr);
-    // object_t * result = env_lookup(((interpreter_t*)p_ctx)->p_current_env, expr.name->lexeme);
-    // if (result) {
-    //
-    // } else {
-    //     throw_error(p_ctx, "Undefined variable '%s' at line %d",
-    //     expr.name->lexeme, expr.name->line);
-    // }
-    // return result;
+    return lookup_variable(expr.name, p_expr, p_ctx);
 }
 static void * visit_block_stmt(const stmt_t * p_stmt, void * p_ctx) {
     const stmt_block_t stmt = p_stmt->as.block_stmt;
     interpreter_t * p_interpreter = p_ctx;
-    environment_t * p_new_env = create_environment(p_interpreter->p_current_env);
-    set_interpreter_environment(p_interpreter, p_new_env);
+    environment_t * previous = p_interpreter->environment;
+    environment_t * environment = new_environment(previous);
+    p_interpreter->environment = environment;
     for (size_t i = 0; i < *stmt.count; i++) {
-        execute(stmt.statements[i], p_interpreter);
+        execute(stmt.statements[i], p_ctx);
+        if (p_interpreter->had_runtime_error)
+            p_interpreter->environment = previous;
+        check_runtime_error(p_ctx);
     }
-    set_interpreter_environment(p_interpreter, get_parent_environment(p_new_env));
     return NULL;
 }
 static void * visit_class_stmt(const stmt_t * p_stmt, void * p_ctx) {
@@ -407,9 +406,9 @@ static void * visit_function_stmt(const stmt_t * p_stmt, void * p_ctx) {
     stmt->params_count  = p_stmt->as.function_stmt.params_count;
 
 
-    function_t * p_function = new_function(stmt, ((interpreter_t*)p_ctx)->p_current_env);
-    const object_t * p_object = new_object(OBJECT_FUNCTION, p_function);
-    declare_variable(((interpreter_t*)p_ctx)->p_current_env, stmt->name->lexeme, p_object);
+    function_t * p_function = new_function(stmt, ((interpreter_t*)p_ctx)->environment);
+    object_t * p_object = new_object(OBJECT_FUNCTION, p_function);
+    environment_define(stmt->name->lexeme, p_object, ((interpreter_t*)p_ctx)->environment);
     return NULL;
 }
 static void * visit_if_stmt(const stmt_t * p_stmt, void * p_ctx) {
@@ -444,9 +443,11 @@ static void * visit_return_stmt(const stmt_t * p_stmt, void * p_ctx) {
 }
 static void * visit_var_stmt(const stmt_t * p_stmt, void * p_ctx) {
     const stmt_var_t stmt = p_stmt->as.var_stmt;
-    const object_t * p_value = evaluate(stmt.initializer, p_ctx);
+    object_t * p_value = NULL;
+    if (stmt.initializer)
+        p_value = evaluate(stmt.initializer, p_ctx);
     check_runtime_error(p_ctx);
-    declare_variable(((interpreter_t*)p_ctx)->p_current_env, stmt.name->lexeme, p_value);
+    environment_define(stmt.name->lexeme, p_value, ((interpreter_t*)p_ctx)->environment);
     return NULL;
 }
 static void * visit_while_stmt(const stmt_t * p_stmt, void * p_ctx) {

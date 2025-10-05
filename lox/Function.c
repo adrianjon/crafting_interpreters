@@ -3,8 +3,12 @@
 //
 
 #include "Function.h"
+
+#include <stdio.h>
+
 #include "Environment.h"
 #include "../extra/Memory.h"
+#include "../extra/Map.h"
 
 struct function {
     stmt_function_t * p_declaration;
@@ -15,28 +19,31 @@ function_t * new_function(stmt_function_t * p_declaration, environment_t * closu
     function_t * p_new = memory_allocate(sizeof(function_t));
     p_new->p_declaration = p_declaration;
     // should clone the environment as the funciton closure
-    p_new->closure = copy_environment(closure);
+    p_new->closure = closure;
     return p_new;
+}
+size_t function_arity(const function_t * p_function) {
+    return *p_function->p_declaration->params_count;
 }
 stmt_function_t * get_function_declaration(const function_t * p_function) {
     return p_function->p_declaration;
 }
-object_t * call_function(const function_t * p_function, interpreter_t * p_interpreter,
+object_t * function_call(const function_t * p_function, interpreter_t * p_interpreter,
     object_t ** pp_arguments) {
-    environment_t * p_parent_env = get_interpreter_environment(p_interpreter);
-    environment_t * p_env = create_environment(p_function->closure);
-    set_interpreter_environment(p_interpreter, p_env);
-
+    environment_t * p_env = new_environment(p_function->closure);
     for (size_t i = 0; i < *p_function->p_declaration->params_count; i++) {
-        declare_variable(p_env, p_function->p_declaration->params[i]->lexeme, pp_arguments[i]);
+        environment_define(p_function->p_declaration->params[i]->lexeme,
+            pp_arguments[i], p_env);
     }
+    //    environment_t * p_parent_env = get_interpreter_environment(p_interpreter);
 
+    environment_t * previous = get_interpreter_environment(p_interpreter);
+    set_interpreter_environment(p_interpreter, p_env);
     object_t * p_ret = NULL;
-    // TODO fix this, p_function->p_declaration->body pointer is garbage
-    // assume return is last statement
     for (size_t i = 0; i < *p_function->p_declaration->count; i++) {
         p_ret = execute(p_function->p_declaration->body[i], p_interpreter);
     }
-    set_interpreter_environment(p_interpreter, p_parent_env);
+    set_interpreter_environment(p_interpreter, previous);
+    // assumes last statement in function call is return
     return p_ret;
 }
