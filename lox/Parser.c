@@ -428,11 +428,9 @@ static stmt_t * expression_statement(parser_t * p_parser) {
 }
 static stmt_t * var_declaration(parser_t * p_parser) {
     // declaration     -> varDecl | statement ;
-    expr_t * initializer = NULL;
-    // if (token_check(p_parser, IDENTIFIER)) {
-    //     initializer = parse_expression(p_parser);
-    // }
+
     const token_t token = consume(p_parser, IDENTIFIER, "Expect variable name.");
+    expr_t * initializer = NULL;
 
     if (token_match(p_parser, 1, EQUAL)) {
         initializer = parse_expression(p_parser);

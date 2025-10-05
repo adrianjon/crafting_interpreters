@@ -5,8 +5,8 @@
 #include "Map.h"
 #include <stdlib.h>
 #include <string.h>
-
-static size_t hash_string(const char *str, size_t num_buckets) {
+static size_t hash_string(const void * key, const size_t num_buckets) {
+    const char * str = key;
     size_t hash = 5381;
     int c;
     while ((c = *str++))
@@ -14,7 +14,8 @@ static size_t hash_string(const char *str, size_t num_buckets) {
     return hash % num_buckets;
 }
 
-map_t *map_create(size_t num_buckets) {
+map_t *map_create(const size_t num_buckets,
+                    const map_hash_fn_t hash, const map_cmp_fn_t cmp) {
     map_t *map = malloc(sizeof(map_t));
     if (!map) return NULL;
     map->buckets = calloc(num_buckets, sizeof(map_entry_t*));
@@ -24,10 +25,12 @@ map_t *map_create(size_t num_buckets) {
     }
     map->num_buckets = num_buckets;
     map->size = 0;
+    map->hash = hash ? hash : hash_string;
+    map->cmp = cmp;
     return map;
 }
 
-void map_destroy(map_t *map) {
+void map_destroy(map_t * map) {
     if (!map) return;
     for (size_t i = 0; i < map->num_buckets; i++) {
         map_entry_t *entry = map->buckets[i];
@@ -42,11 +45,11 @@ void map_destroy(map_t *map) {
     free(map);
 }
 
-bool map_put(map_t *map, const char *key, void *value) {
-    size_t index = hash_string(key, map->num_buckets);
-    map_entry_t *entry = map->buckets[index];
+bool map_put(map_t * map, const void * key, void * value) {
+    const size_t index = map->hash(key, map->num_buckets);
+    map_entry_t * entry = map->buckets[index];
     while (entry) {
-        if (strcmp(entry->key, key) == 0) {
+        if (map->cmp(entry->key, key)) {
             entry->value = value;
             return true;
         }
@@ -55,7 +58,7 @@ bool map_put(map_t *map, const char *key, void *value) {
     // Not found: add new entry
     entry = malloc(sizeof(map_entry_t));
     if (!entry) return false;
-    entry->key = strdup(key);
+    entry->key = key;
     entry->value = value;
     entry->next = map->buckets[index];
     map->buckets[index] = entry;
@@ -63,23 +66,23 @@ bool map_put(map_t *map, const char *key, void *value) {
     return true;
 }
 
-void *map_get(map_t *map, const char *key) {
-    size_t index = hash_string(key, map->num_buckets);
-    map_entry_t *entry = map->buckets[index];
+map_value_t map_get(map_t * map, const void * key) {
+    const size_t index = map->hash(key, map->num_buckets);
+    map_entry_t * entry = map->buckets[index];
     while (entry) {
-        if (strcmp(entry->key, key) == 0)
+        if (map->cmp(entry->key, key))
             return entry->value;
         entry = entry->next;
     }
     return NULL;
 }
 
-bool map_remove(map_t *map, const char *key) {
-    size_t index = hash_string(key, map->num_buckets);
-    map_entry_t *entry = map->buckets[index];
-    map_entry_t *prev = NULL;
+bool map_remove(map_t * map, const void * key) {
+    const size_t index = map->hash(key, map->num_buckets);
+    map_entry_t * entry = map->buckets[index];
+    map_entry_t * prev = NULL;
     while (entry) {
-        if (strcmp(entry->key, key) == 0) {
+        if (map->cmp(entry->key, key)) {
             if (prev)
                 prev->next = entry->next;
             else
@@ -95,6 +98,6 @@ bool map_remove(map_t *map, const char *key) {
     return false;
 }
 
-size_t map_size(const map_t *map) {
+size_t map_size(const map_t * map) {
     return map->size;
 }

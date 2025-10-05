@@ -1,3 +1,7 @@
+var temp = a;
+var a;
+a = temp;
+/*
 var a = "global";
 {
     fun showA() {
@@ -15,3 +19,4 @@ while (x < 401) {
     x = x + 1;
 }
 print 10 / 0;
+*/

@@ -121,11 +121,44 @@ static void resolve_stmt(const stmt_t * p_stmt, resolver_t * p_resolver) {
 static void resolve_expr(const expr_t * p_expr, resolver_t * p_resolver) {
     expr_accept(p_expr, &p_resolver->expr_visitor, p_resolver);
 }
+
 static void begin_scope(const resolver_t * p_resolver) {
     stack_push(p_resolver->scopes, map_create(8));
 }
 static void end_scope(const resolver_t * p_resolver) {
     stack_pop(p_resolver->scopes);
+}
+static void declare(const token_t * p_name, const resolver_t * p_resolver) {
+    if (stack_is_empty(p_resolver->scopes)) return;
+    map_t * scope = stack_peek(p_resolver->scopes);
+    map_put(scope, p_name->lexeme, false);
+}
+static void define(const token_t * p_name, const  resolver_t * p_resolver) {
+    if (stack_is_empty(p_resolver->scopes)) return;
+    map_t * scope = stack_peek(p_resolver->scopes);
+    map_put(scope, p_name->lexeme, true);
+}
+static void resolve_function(const stmt_function_t stmt, resolver_t * p_resolver) {
+    begin_scope(p_resolver);
+    for (size_t i = 0; i < *stmt.params_count; i++) {
+        declare(stmt.params[i], p_resolver);
+        define(stmt.params[i], p_resolver);
+    }
+    for (size_t i = 0; i < *stmt.count; i++) {
+        resolve_stmt(stmt.body[i], p_resolver);
+    }
+    end_scope(p_resolver);
+}
+static void resolve_local(expr_t * p_expr, token_t * p_token, resolver_t * p_resolver) {
+    for (int i = (int)stack_size(p_resolver->scopes) - 1; i >= 0; i--) {
+        map_t * scope = (map_t*)p_resolver->scopes->data[i];
+        if (map_contains(scope, p_token->lexeme)) {
+            int distance = (int)stack_size(p_resolver->scopes) - 1 - i;
+            interpreter_resolve(p_expr, distance);
+            return;
+        }
+    }
+    // global
 }
 // Visitor implementations
 static void * visit_assign_expr        (const expr_t * p_expr, void * p_ctx) {
@@ -139,8 +172,11 @@ static void * visit_binary_expr        (const expr_t * p_expr, void * p_ctx) {
     return NULL;
 }
 static void * visit_call_expr          (const expr_t * p_expr, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented expression: %s (%d)",
-        g_expr_type_names[p_expr->type], p_expr->type);
+    const expr_call_t expr = p_expr->as.call_expr;
+    resolve_expr(expr.callee, p_ctx);
+    for (size_t i = 0; i < *expr.count; i++) {
+        resolve_expr(expr.arguments[i], p_ctx);
+    }
     return NULL;
 }
 static void * visit_get_expr           (const expr_t * p_expr, void * p_ctx) {
@@ -149,18 +185,17 @@ static void * visit_get_expr           (const expr_t * p_expr, void * p_ctx) {
     return NULL;
 }
 static void * visit_grouping_expr      (const expr_t * p_expr, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented expression: %s (%d)",
-        g_expr_type_names[p_expr->type], p_expr->type);
+    const expr_grouping_t expr = p_expr->as.grouping_expr;
+    resolve_expr(expr.expression, p_ctx);
     return NULL;
 }
 static void * visit_literal_expr       (const expr_t * p_expr, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented expression: %s (%d)",
-        g_expr_type_names[p_expr->type], p_expr->type);
     return NULL;
 }
 static void * visit_logical_expr       (const expr_t * p_expr, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented expression: %s (%d)",
-        g_expr_type_names[p_expr->type], p_expr->type);
+    const expr_logical_t expr = p_expr->as.logical_expr;
+    resolve_expr(expr.left, p_ctx);
+    resolve_expr(expr.right, p_ctx);
     return NULL;
 }
 static void * visit_set_expr           (const expr_t * p_expr, void * p_ctx) {
@@ -179,13 +214,19 @@ static void * visit_this_expr          (const expr_t * p_expr, void * p_ctx) {
     return NULL;
 }
 static void * visit_unary_expr         (const expr_t * p_expr, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented expression: %s (%d)",
-        g_expr_type_names[p_expr->type], p_expr->type);
+    const expr_unary_t expr = p_expr->as.unary_expr;
+    resolve_expr(expr.right, p_ctx);
     return NULL;
 }
 static void * visit_variable_expr      (const expr_t * p_expr, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented expression: %s (%d)",
-        g_expr_type_names[p_expr->type], p_expr->type);
+    const expr_variable_t expr = p_expr->as.variable_expr;
+    resolver_t * p_resolver = p_ctx;
+    map_t * scope = stack_peek(p_resolver->scopes);
+    if (!stack_is_empty(p_resolver->scopes) &&
+        !map_get(scope, expr.name->lexeme)) {
+        throw_error(p_resolver, "Can't read local variable in its own initializer.");
+    }
+    resolve_local()
     return NULL;
 }
 
@@ -201,37 +242,46 @@ static void * visit_class_stmt         (const stmt_t * p_stmt, void * p_ctx) {
     return NULL;
 }
 static void * visit_expression_stmt    (const stmt_t * p_stmt, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented statement: %s (%d)",
-        g_stmt_type_names[p_stmt->type], p_stmt->type);
+    const stmt_expression_t stmt = p_stmt->as.expression_stmt;
+    resolve_expr(stmt.expression, p_ctx);
     return NULL;
 }
-static void * visit_function_stmt      (const stmt_t * p_stmt, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented statement: %s (%d)",
-        g_stmt_type_names[p_stmt->type], p_stmt->type);
+static void * visit_function_stmt(const stmt_t * p_stmt, void * p_ctx) {
+    const stmt_function_t stmt = p_stmt->as.function_stmt;
+    declare(stmt.name, p_ctx);
+    define(stmt.name, p_ctx);
+    resolve_function(stmt, p_ctx);
     return NULL;
 }
-static void * visit_if_stmt            (const stmt_t * p_stmt, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented statement: %s (%d)",
-        g_stmt_type_names[p_stmt->type], p_stmt->type);
+static void * visit_if_stmt(const stmt_t * p_stmt, void * p_ctx) {
+    const stmt_if_t stmt = p_stmt->as.if_stmt;
+    resolve_expr(stmt.condition, p_ctx);
+    resolve_stmt(stmt.then_branch, p_ctx);
+    if (stmt.else_branch) resolve_stmt(stmt.else_branch, p_ctx);
     return NULL;
 }
 static void * visit_print_stmt         (const stmt_t * p_stmt, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented statement: %s (%d)",
-        g_stmt_type_names[p_stmt->type], p_stmt->type);
+    const stmt_print_t stmt = p_stmt->as.print_stmt;
+    resolve_expr(stmt.expression, p_ctx);
     return NULL;
 }
 static void * visit_return_stmt        (const stmt_t * p_stmt, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented statement: %s (%d)",
-        g_stmt_type_names[p_stmt->type], p_stmt->type);
+    const stmt_return_t stmt = p_stmt->as.return_stmt;
+    if (stmt.value) resolve_expr(stmt.value, p_ctx);
     return NULL;
 }
-static void * visit_var_stmt           (const stmt_t * p_stmt, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented statement: %s (%d)",
-        g_stmt_type_names[p_stmt->type], p_stmt->type);
+static void * visit_var_stmt(const stmt_t * p_stmt, void * p_ctx) {
+    const stmt_var_t stmt = p_stmt->as.var_stmt;
+    declare(stmt.name, p_ctx);
+    if (stmt.initializer) {
+        resolve_expr(stmt.initializer, p_ctx);
+    }
+    define(stmt.name, p_ctx);
     return NULL;
 }
 static void * visit_while_stmt         (const stmt_t * p_stmt, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented statement: %s (%d)",
-        g_stmt_type_names[p_stmt->type], p_stmt->type);
+    const stmt_while_t stmt = p_stmt->as.while_stmt;
+    resolve_expr(stmt.condition, p_ctx);
+    resolve_stmt(stmt.body, p_ctx);
     return NULL;
 }

@@ -23,4 +23,5 @@ void * execute                      (const stmt_t * p_stmt,
                                         interpreter_t * p_interpreter);
 environment_t * get_interpreter_environment(const interpreter_t * p_interpreter);
 void set_interpreter_environment(interpreter_t * p_interpreter, environment_t * p_env);
+void interpreter_resolve(const expr_t * p_expr, int depth, const interpreter_t * p_interpreter);
 #endif //LOX_INTERPRETER_H

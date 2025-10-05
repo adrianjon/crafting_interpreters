@@ -13,9 +13,11 @@
 #include "Environment.h"
 #include "Function.h"
 #include "../extra/Memory.h"
+#include "../extra/Map.h"
 
 struct interpreter {
     environment_t * p_current_env;
+    map_t * locals;
     expr_visitor_t expr_visitor;
     stmt_visitor_t stmt_visitor;
     bool had_runtime_error;
@@ -49,6 +51,13 @@ static void * visit_return_stmt         (const stmt_t * p_stmt, void * p_ctx);
 static void * visit_var_stmt            (const stmt_t * p_stmt, void * p_ctx);
 static void * visit_while_stmt          (const stmt_t * p_stmt, void * p_ctx);
 
+size_t hash_expr(const void * key, const size_t num_buckets) {
+    return (size_t)key % num_buckets;
+}
+bool cmp_expr(const void * key1, const void * key2) {
+    return key1 == key2;
+}
+
 // Public API
 interpreter_t * new_interpreter(void) {
     interpreter_t * p_interpreter = memory_allocate(sizeof(interpreter_t));
@@ -57,6 +66,7 @@ interpreter_t * new_interpreter(void) {
         return NULL;
     }
     p_interpreter->p_current_env = create_environment(NULL);
+    p_interpreter->locals = map_create(8, hash_expr, cmp_expr);
     p_interpreter->expr_visitor.visit_assign        = visit_assign_expr;
     p_interpreter->expr_visitor.visit_binary        = visit_binary_expr;
     p_interpreter->expr_visitor.visit_call          = visit_call_expr;
@@ -103,6 +113,9 @@ environment_t * get_interpreter_environment(const interpreter_t * p_interpreter)
 }
 void set_interpreter_environment(interpreter_t * p_interpreter, environment_t * p_env) {
     p_interpreter->p_current_env = p_env;
+}
+void interpreter_resolve(const expr_t * p_expr, const int depth, const interpreter_t * p_interpreter) {
+    map_put(p_interpreter->locals, p_expr, (void*)(intptr_t)depth);
 }
 
 // Private helper functions
