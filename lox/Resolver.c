@@ -123,7 +123,7 @@ static void resolve_expr(const expr_t * p_expr, resolver_t * p_resolver) {
 }
 
 static void begin_scope(const resolver_t * p_resolver) {
-    stack_push(p_resolver->scopes, map_create(8));
+    stack_push(p_resolver->scopes, map_create(8, NULL, NULL, NULL));
 }
 static void end_scope(const resolver_t * p_resolver) {
     stack_pop(p_resolver->scopes);
@@ -136,7 +136,7 @@ static void declare(const token_t * p_name, const resolver_t * p_resolver) {
 static void define(const token_t * p_name, const  resolver_t * p_resolver) {
     if (stack_is_empty(p_resolver->scopes)) return;
     map_t * scope = stack_peek(p_resolver->scopes);
-    map_put(scope, p_name->lexeme, true);
+    map_put(scope, p_name->lexeme, (void*)true);
 }
 static void resolve_function(const stmt_function_t stmt, resolver_t * p_resolver) {
     begin_scope(p_resolver);
@@ -161,17 +161,17 @@ static void resolve_local(expr_t * p_expr, token_t * p_token, resolver_t * p_res
     // global
 }
 // Visitor implementations
-static void * visit_assign_expr        (const expr_t * p_expr, void * p_ctx) {
+static void * visit_assign_expr(const expr_t * p_expr, void * p_ctx) {
     throw_error(p_ctx, "Unimplemented expression: %s (%d)",
         g_expr_type_names[p_expr->type], p_expr->type);
     return NULL;
 }
-static void * visit_binary_expr        (const expr_t * p_expr, void * p_ctx) {
+static void * visit_binary_expr(const expr_t * p_expr, void * p_ctx) {
     throw_error(p_ctx, "Unimplemented expression: %s (%d)",
         g_expr_type_names[p_expr->type], p_expr->type);
     return NULL;
 }
-static void * visit_call_expr          (const expr_t * p_expr, void * p_ctx) {
+static void * visit_call_expr(const expr_t * p_expr, void * p_ctx) {
     const expr_call_t expr = p_expr->as.call_expr;
     resolve_expr(expr.callee, p_ctx);
     for (size_t i = 0; i < *expr.count; i++) {
@@ -179,7 +179,7 @@ static void * visit_call_expr          (const expr_t * p_expr, void * p_ctx) {
     }
     return NULL;
 }
-static void * visit_get_expr           (const expr_t * p_expr, void * p_ctx) {
+static void * visit_get_expr(const expr_t * p_expr, void * p_ctx) {
     throw_error(p_ctx, "Unimplemented expression: %s (%d)",
         g_expr_type_names[p_expr->type], p_expr->type);
     return NULL;
@@ -189,16 +189,17 @@ static void * visit_grouping_expr      (const expr_t * p_expr, void * p_ctx) {
     resolve_expr(expr.expression, p_ctx);
     return NULL;
 }
-static void * visit_literal_expr       (const expr_t * p_expr, void * p_ctx) {
+static void * visit_literal_expr(const expr_t * p_expr, void * p_ctx) {
+    (void)p_expr;
     return NULL;
 }
-static void * visit_logical_expr       (const expr_t * p_expr, void * p_ctx) {
+static void * visit_logical_expr(const expr_t * p_expr, void * p_ctx) {
     const expr_logical_t expr = p_expr->as.logical_expr;
     resolve_expr(expr.left, p_ctx);
     resolve_expr(expr.right, p_ctx);
     return NULL;
 }
-static void * visit_set_expr           (const expr_t * p_expr, void * p_ctx) {
+static void * visit_set_expr(const expr_t * p_expr, void * p_ctx) {
     throw_error(p_ctx, "Unimplemented expression: %s (%d)",
         g_expr_type_names[p_expr->type], p_expr->type);
     return NULL;
@@ -213,20 +214,20 @@ static void * visit_this_expr          (const expr_t * p_expr, void * p_ctx) {
         g_expr_type_names[p_expr->type], p_expr->type);
     return NULL;
 }
-static void * visit_unary_expr         (const expr_t * p_expr, void * p_ctx) {
+static void * visit_unary_expr(const expr_t * p_expr, void * p_ctx) {
     const expr_unary_t expr = p_expr->as.unary_expr;
     resolve_expr(expr.right, p_ctx);
     return NULL;
 }
-static void * visit_variable_expr      (const expr_t * p_expr, void * p_ctx) {
+static void * visit_variable_expr(const expr_t * p_expr, void * p_ctx) {
     const expr_variable_t expr = p_expr->as.variable_expr;
     resolver_t * p_resolver = p_ctx;
-    map_t * scope = stack_peek(p_resolver->scopes);
+    const map_t * scope = stack_peek(p_resolver->scopes);
     if (!stack_is_empty(p_resolver->scopes) &&
         !map_get(scope, expr.name->lexeme)) {
         throw_error(p_resolver, "Can't read local variable in its own initializer.");
     }
-    resolve_local()
+    //resolve_local();
     return NULL;
 }
 

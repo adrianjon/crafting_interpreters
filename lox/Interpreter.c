@@ -57,7 +57,9 @@ size_t hash_expr(const void * key, const size_t num_buckets) {
 bool cmp_expr(const void * key1, const void * key2) {
     return key1 == key2;
 }
-
+void clean_expr(const void * key, const void * value) {
+    (void)key, (void)value;
+}
 // Public API
 interpreter_t * new_interpreter(void) {
     interpreter_t * p_interpreter = memory_allocate(sizeof(interpreter_t));
@@ -66,7 +68,7 @@ interpreter_t * new_interpreter(void) {
         return NULL;
     }
     p_interpreter->p_current_env = create_environment(NULL);
-    p_interpreter->locals = map_create(8, hash_expr, cmp_expr);
+    p_interpreter->locals = map_create(8, hash_expr, cmp_expr, clean_expr);
     p_interpreter->expr_visitor.visit_assign        = visit_assign_expr;
     p_interpreter->expr_visitor.visit_binary        = visit_binary_expr;
     p_interpreter->expr_visitor.visit_call          = visit_call_expr;
