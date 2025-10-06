@@ -46,75 +46,75 @@ typedef enum {
 } expr_type_t;
 
 typedef struct {
-	expr_t* target;
-	expr_t* value;
+	expr_t * target;
+	expr_t * value;
 	
 } expr_assign_t;
 
 typedef struct {
-	expr_t* left;
-	token_t* operator;
-	expr_t* right;
+	expr_t * left;
+	token_t * operator;
+	expr_t * right;
 	
 } expr_binary_t;
 
 typedef struct {
-	expr_t* callee;
-	token_t* paren;
+	expr_t * callee;
+	token_t * paren;
 	expr_t ** arguments;
 	size_t * count;
 	
 } expr_call_t;
 
 typedef struct {
-	expr_t* object;
-	token_t* name;
+	expr_t * object;
+	token_t * name;
 	
 } expr_get_t;
 
 typedef struct {
-	expr_t* expression;
+	expr_t * expression;
 	
 } expr_grouping_t;
 
 typedef struct {
-	token_t* kind;
+	token_t * kind;
 	
 } expr_literal_t;
 
 typedef struct {
-	expr_t* left;
-	token_t* operator;
-	expr_t* right;
+	expr_t * left;
+	token_t * operator;
+	expr_t * right;
 	
 } expr_logical_t;
 
 typedef struct {
-	expr_t* object;
-	token_t* name;
-	expr_t* value;
+	expr_t * object;
+	token_t * name;
+	expr_t * value;
 	
 } expr_set_t;
 
 typedef struct {
-	token_t* keyword;
-	token_t* method;
+	token_t * keyword;
+	token_t * method;
 	
 } expr_super_t;
 
 typedef struct {
-	token_t* keyword;
+	token_t * keyword;
 	
 } expr_this_t;
 
 typedef struct {
-	token_t* operator;
-	expr_t* right;
+	token_t * operator;
+	expr_t * right;
 	
 } expr_unary_t;
 
 typedef struct {
-	token_t* name;
+	token_t * name;
 	
 } expr_variable_t;
 

@@ -42,8 +42,11 @@ object_t * function_call(const function_t * p_function, interpreter_t * p_interp
     object_t * p_ret = NULL;
     for (size_t i = 0; i < *p_function->p_declaration->count; i++) {
         p_ret = execute(p_function->p_declaration->body[i], p_interpreter);
+        if (p_ret) {
+            set_interpreter_environment(p_interpreter, previous);
+            return p_ret;
+        }
     }
     set_interpreter_environment(p_interpreter, previous);
-    // assumes last statement in function call is return
-    return p_ret;
+    return NULL;
 }

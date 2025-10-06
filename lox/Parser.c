@@ -28,7 +28,7 @@
                    | "(" expression ")" | IDENTIFIER ;
 
     program         -> declaration* EOF ;
-    declaration     -> funDecl | varDecl | statement ;
+    declaration     -> classDecl | funDecl | varDecl | statement ;
     statement       -> exprStmt | ifStmt | whileStmt | printStmt | returnStmt | block ;
     exprStmt        -> expression ";" ;
     ifStmt          -> "if" "(" expression ")" statement
@@ -38,6 +38,7 @@
     returnStmt      -> "return" expression? ";" ;
     varDecl         -> "var" IDENTIFIER ( "=" expression )? ";" ;
     funDecl         -> "fun" function ;
+    classDecl       -> "class" IDENTIFIER "{" function* "}" ;
     function        -> IDENTIFIER "(" parameters? ")" block ;
     parameters      -> IDENTIFIER ( "," IDENTIFIER )* ;
     block           -> "{" declaration* "}" ;
@@ -493,7 +494,32 @@ static stmt_t * fun_declaration(parser_t * p_parser, const char * kind) {
 
     return fun_decl_stmt;
 }
+static stmt_t * class_declaration(parser_t * p_parser) {
+    token_t * p_name = memory_allocate(sizeof(token_t));
+    *p_name = consume(p_parser, IDENTIFIER, "Expect class name.");
+    consume(p_parser, LEFT_BRACE, "Expected '{' before class body.");
+
+    dynamic_array_t * methods = create_array(2 * sizeof(stmt_t*));
+    size_t n = 0;
+    while (!token_check(p_parser, RIGHT_BRACE) && !token_is_at_end(p_parser)) {
+        array_push(methods, fun_declaration(p_parser, "method"),
+            sizeof(stmt_t*));
+        n++;
+    }
+    consume(p_parser, RIGHT_BRACE, "Expected '}' after class body.");
+    stmt_t * class_decl_stmt = memory_allocate(sizeof(stmt_t));
+    class_decl_stmt->type = STMT_CLASS;
+    class_decl_stmt->as.class_stmt.name = p_name;
+    class_decl_stmt->as.class_stmt.superclass = NULL; // no inheritance for now
+    class_decl_stmt->as.class_stmt.methods = methods->data;
+    class_decl_stmt->as.class_stmt.methods_count = n;
+
+    return class_decl_stmt;
+}
 static stmt_t * declaration(parser_t * p_parser) {
+    if (token_match(p_parser, 1, CLASS)) {
+        return class_declaration(p_parser);
+    }
     if (token_match(p_parser, 1, FUN)) {
         return fun_declaration(p_parser, "function");
     }

@@ -1,3 +1,8 @@
-var x = "hello";
-//x = "hello";
-print x;
+class Person {
+    talk(s) {
+        print s;
+    }
+    walk(d) {
+        return d + 1;
+    }
+}

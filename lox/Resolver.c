@@ -17,14 +17,21 @@
 #include "../extra/Stack.h"
 #include "../extra/Map.h"
 
+enum function_type {
+    FUNCTION_TYPE_NONE,
+    FUNCTION_TYPE_FUNCTION
+};
+
 struct resolver {
     interpreter_t * p_interpreter;
     stack_t * scopes;
+    enum function_type current_function;
     expr_visitor_t expr_visitor;
     stmt_visitor_t stmt_visitor;
     bool had_runtime_error;
     char error_message[256];
 };
+
 
 // Forward declarations
 static void check_runtime_error(resolver_t * p_resolver);
@@ -88,6 +95,7 @@ resolver_t * new_resolver(interpreter_t * p_interpreter) {
 
     p_resolver->p_interpreter = p_interpreter;
     p_resolver->scopes = stack_create(8);
+    p_resolver->current_function = FUNCTION_TYPE_NONE;
 
     return p_resolver;
 }
@@ -142,7 +150,10 @@ static void define(const token_t * p_name, const  resolver_t * p_resolver) {
     map_t * scope = stack_peek(p_resolver->scopes);
     map_put(scope, p_name->lexeme, (void*)true);
 }
-static void resolve_function(const stmt_function_t stmt, resolver_t * p_resolver) {
+static void resolve_function(const stmt_function_t stmt, enum function_type type,
+                                resolver_t * p_resolver) {
+    const enum function_type enclosing_function = p_resolver->current_function;
+    p_resolver->current_function = type;
     begin_scope(p_resolver);
     for (size_t i = 0; i < *stmt.params_count; i++) {
         declare(stmt.params[i], p_resolver);
@@ -152,6 +163,7 @@ static void resolve_function(const stmt_function_t stmt, resolver_t * p_resolver
         resolve_stmt(stmt.body[i], p_resolver);
     }
     end_scope(p_resolver);
+    p_resolver->current_function = enclosing_function;
 }
 static void resolve_local( const expr_t * p_expr, const token_t * p_token, const resolver_t * p_resolver) {
     for (int i = (int)stack_size(p_resolver->scopes) - 1; i >= 0; i--) {
@@ -256,7 +268,7 @@ static void * visit_function_stmt(const stmt_t * p_stmt, void * p_ctx) {
     const stmt_function_t stmt = p_stmt->as.function_stmt;
     declare(stmt.name, p_ctx);
     define(stmt.name, p_ctx);
-    resolve_function(stmt, p_ctx);
+    resolve_function(stmt, FUNCTION_TYPE_FUNCTION, p_ctx);
     return NULL;
 }
 static void * visit_if_stmt(const stmt_t * p_stmt, void * p_ctx) {
@@ -273,6 +285,9 @@ static void * visit_print_stmt         (const stmt_t * p_stmt, void * p_ctx) {
 }
 static void * visit_return_stmt        (const stmt_t * p_stmt, void * p_ctx) {
     const stmt_return_t stmt = p_stmt->as.return_stmt;
+    if (((resolver_t*)p_ctx)->current_function == FUNCTION_TYPE_NONE) {
+        throw_error(p_ctx, "Can't return from top level code.");
+    }
     if (stmt.value) resolve_expr(stmt.value, p_ctx);
     return NULL;
 }
