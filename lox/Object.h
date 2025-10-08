@@ -17,6 +17,7 @@ typedef enum {
     OBJECT_BOOLEAN,
     OBJECT_NATIVE,
     OBJECT_FUNCTION,
+    OBJECT_CLASS,
     OBJECT_NIL,
 } object_type_t;
 

@@ -96,7 +96,7 @@ region_t * new_region(void) {
     p_region->used = 0;
     return p_region;
 }
-#define REGION_ALIGNMENT 8
+#define REGION_ALIGNMENT 1
 void * region_allocate(const size_t size) {
     if (!g_p_current_region) {
         fprintf(stderr, "Region used uninitialized.\n");

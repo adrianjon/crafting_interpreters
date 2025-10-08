@@ -16,6 +16,7 @@ const char* g_object_type_names[] = {
     "OBJECT_BOOLEAN",
     "OBJECT_NATIVE",
     "OBJECT_FUNCTION",
+    "OBJECT_CLASS",
     "OBJECT_NIL",
 };
 

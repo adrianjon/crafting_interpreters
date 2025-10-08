@@ -12,6 +12,7 @@
 #include "Parser.h"
 #include "Environment.h"
 #include "Function.h"
+#include "Class.h"
 #include "../extra/Memory.h"
 #include "../extra/Map.h"
 
@@ -52,8 +53,11 @@ static void * visit_return_stmt         (const stmt_t * p_stmt, void * p_ctx);
 static void * visit_var_stmt            (const stmt_t * p_stmt, void * p_ctx);
 static void * visit_while_stmt          (const stmt_t * p_stmt, void * p_ctx);
 
-size_t hash_expr(const void * key, const size_t num_buckets) {
-    return (size_t)key % num_buckets;
+// size_t hash_expr(const void * key, const size_t num_buckets) {
+//     return (size_t)key % num_buckets;
+// }
+size_t hash_expr(const void * key) {
+    return (size_t)key;
 }
 bool cmp_expr(const void * key1, const void * key2) {
     return key1 == key2;
@@ -61,8 +65,8 @@ bool cmp_expr(const void * key1, const void * key2) {
 void clean_expr(const void * key, const void * value) {
     (void)key, (void)value;
 }
-const void * copy_expr(const void * key) {
-    return key;
+void * copy_expr(const void * key) {
+    return (void*)key;
 }
 // Public API
 interpreter_t * new_interpreter(void) {
@@ -73,7 +77,9 @@ interpreter_t * new_interpreter(void) {
     }
     p_interpreter->globals = new_environment(NULL);
     p_interpreter->environment = p_interpreter->globals;
-    p_interpreter->locals = map_create(8, hash_expr, cmp_expr, clean_expr, copy_expr);
+    p_interpreter->locals = map_create(8,
+        (map_config_t){hash_expr, cmp_expr, copy_expr, copy_expr, clean_expr
+    });
     p_interpreter->expr_visitor.visit_assign        = visit_assign_expr;
     p_interpreter->expr_visitor.visit_binary        = visit_binary_expr;
     p_interpreter->expr_visitor.visit_call          = visit_call_expr;
@@ -387,8 +393,11 @@ static void * visit_block_stmt(const stmt_t * p_stmt, void * p_ctx) {
     return NULL;
 }
 static void * visit_class_stmt(const stmt_t * p_stmt, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented statement: %s (%d)",
-        g_stmt_type_names[p_stmt->type], p_stmt->type);
+    const stmt_class_t stmt = p_stmt->as.class_stmt;
+    environment_define(stmt.name->lexeme, NULL, ((interpreter_t*)p_ctx)->environment);
+    class_t * p_class = new_class(stmt.name->lexeme);
+    object_t * p_object = new_object(OBJECT_CLASS, p_class);
+    environment_assign(stmt.name, p_object, ((interpreter_t*)p_ctx)->environment);
     return NULL;
 }
 static void * visit_expression_stmt(const stmt_t * p_stmt, void * p_ctx) {

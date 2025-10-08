@@ -25,33 +25,24 @@
 
 #include <stddef.h>
 #include <stdbool.h>
+#include "Interfaces.h"
 
+typedef struct map map_t;
+typedef struct map_entry map_entry_t;
+typedef struct map_enumerator map_enumerator_t;
 
-typedef struct map_entry {
-    const void * key;
-    void * value;
-    struct map_entry * next;
-} map_entry_t;
-
-typedef size_t (*map_hash_fn_t)(const void * key, size_t num_buckets);
-typedef bool (*map_cmp_fn_t)(const void * key1, const void * key2);
 typedef void (*map_clean_fn_t)(const void * key, const void * value);
-typedef const void * (*map_copy_fn_t)(const void * key);
 
 typedef struct {
-    map_entry_t **buckets;
-    size_t num_buckets;
-    size_t size;
-    map_hash_fn_t hash;
-    map_cmp_fn_t cmp;
-    map_clean_fn_t clean;
-    map_copy_fn_t copy;
-} map_t;
+    const hash_fn_t hash;
+    const cmp_fn_t cmp;
+    const cpy_fn_t kcopy;
+    const cpy_fn_t vcopy;
+    const map_clean_fn_t clean;
+} map_config_t;
 
-//map_t *map_create(size_t num_buckets);
-map_t *map_create(size_t num_buckets, map_hash_fn_t hash, map_cmp_fn_t cmp,
-    map_clean_fn_t clean, map_copy_fn_t copy);
-
+map_t *map_create(size_t num_buckets, map_config_t config);
+map_config_t map_default_config(void);
 void map_destroy(map_t *map);
 
 bool map_put(map_t * map, const void * key, void * value);
@@ -60,4 +51,12 @@ bool map_remove(map_t * map, const void * key);
 size_t map_size(const map_t * map);
 bool map_contains(const map_t * map, const void * key);
 
+const void * map_entry_key(const map_entry_t * entry);
+void * map_entry_value(const map_entry_t * entry);
+
+map_enumerator_t * map_get_enumerator(map_t * map);
+bool map_enumerator_next(map_enumerator_t * it);
+void * map_enumerator_current(map_enumerator_t * it);
+void map_enumerator_reset(map_enumerator_t * it);
+void map_enumerator_destroy(map_enumerator_t * it);
 #endif //LOX_MAP_H

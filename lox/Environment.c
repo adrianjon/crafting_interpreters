@@ -23,12 +23,14 @@ struct environment {
     environment_t * enclosing;
     map_t * values; // <char*,object_t*>
 };
-
+void * obj_copy(const void * object) {
+    return (void *)object; // just pointer no deep copy
+}
 environment_t * new_environment(environment_t * p_enclosing) {
     environment_t * p_env = memory_allocate(sizeof(environment_t));
     p_env->enclosing = p_enclosing;
     // values is a map of type <char*, object_t*> keys are owned, values not
-    p_env->values = map_create(4, NULL, NULL, NULL, NULL);
+    p_env->values = map_create(4, (map_config_t){.vcopy = obj_copy});
     return p_env;
 }
 

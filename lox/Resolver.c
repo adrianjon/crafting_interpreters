@@ -131,7 +131,7 @@ static void resolve_expr(const expr_t * p_expr, resolver_t * p_resolver) {
 }
 
 static void begin_scope(const resolver_t * p_resolver) {
-    stack_push(p_resolver->scopes, map_create(8, NULL, NULL, NULL, NULL));
+    stack_push(p_resolver->scopes, map_create(8, (map_config_t){0}));
 }
 static void end_scope(const resolver_t * p_resolver) {
     stack_pop(p_resolver->scopes);
@@ -255,8 +255,9 @@ static void * visit_block_stmt(const stmt_t * p_stmt, void * p_ctx) {
     return NULL;
 }
 static void * visit_class_stmt         (const stmt_t * p_stmt, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented statement: %s (%d)",
-        g_stmt_type_names[p_stmt->type], p_stmt->type);
+    const stmt_class_t stmt = p_stmt->as.class_stmt;
+    declare(stmt.name, p_ctx);
+    define(stmt.name, p_ctx);
     return NULL;
 }
 static void * visit_expression_stmt    (const stmt_t * p_stmt, void * p_ctx) {

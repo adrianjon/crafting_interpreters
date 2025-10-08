@@ -6,3 +6,15 @@ class Person {
         return d + 1;
     }
 }
+fun hello() {
+    print "hello";
+    var y = 0;
+    fun x() {
+        print y + 1;
+    }
+    return x;
+}
+var o = hello();
+o();
+
+//Person();

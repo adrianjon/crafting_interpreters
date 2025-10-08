@@ -24,6 +24,12 @@ add_executable(lox main.c
         extra/Map.h
         extra/Stack.c
         extra/Stack.h
+        lox/Class.c
+        lox/Class.h
+        lox/Callable.c
+        lox/Callable.h
+        lox/Enumerable.h
+        extra/Interfaces.h
 )
 
 add_executable(GenerateAst tools/GenerateAst.c

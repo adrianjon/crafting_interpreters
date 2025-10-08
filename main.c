@@ -21,24 +21,19 @@ int main(void) {
     // TESTING
     // region_t * r = new_region();
     // activate_region(r);
-    // stack_t * p_stack = stack_create(8);
-    // map_t * p_map = map_create(10);
-    // stack_push(p_stack, p_map);
-    // int * x = memory_allocate(sizeof(int));
-    // *x = 40;
-    // bool success = map_put(p_map, "hello", x);
-    // const int * result = map_get(p_map, "hello");
-    // printf("Stack size: %zu\n", stack_size(p_stack));
-    // printf("Result: %d\n", *result);
-    // map_t * a = stack_peek(p_stack);
-    // int y = 5;
-    // map_put(a, "hello", &y);
-    // printf("Stack size: %zu\n", stack_size(p_stack));
-    // result = map_get(p_map, "hello");
-    // printf("Result: %d\n", *result);
     //
-    // map_destroy(p_map);
-    // stack_destroy(p_stack);
+    // map_t * map = map_create(10, map_default_config());
+    // map_put(map, "apple", "red");
+    // map_put(map, "banana", "yellow");
+    // map_put(map, "grape", "purple");
+    //
+    // map_enumerator_t * it = map_get_enumerator(map);
+    // printf("Map contents:\n");
+    // while (map_enumerator_next(it)) {
+    //     const map_entry_t * entry = map_enumerator_current(it);
+    //     printf("    %s => %s\n",
+    //         (const char*)map_entry_key(entry), (const char*)map_entry_value(entry));
+    // }
     // region_free(r);
 
     // allocate memory
