@@ -184,9 +184,9 @@ static void * visit_assign_expr(const expr_t * p_expr, void * p_ctx) {
     return NULL;
 }
 static void * visit_binary_expr(const expr_t * p_expr, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented expression: %s (%d)",
-        g_expr_type_names[p_expr->type], p_expr->type);
-    return NULL;
+    const expr_binary_t expr = p_expr->as.binary_expr;
+    resolve_expr(expr.left, p_ctx);
+    resolve_expr(expr.right, p_ctx);
 }
 static void * visit_call_expr(const expr_t * p_expr, void * p_ctx) {
     const expr_call_t expr = p_expr->as.call_expr;
