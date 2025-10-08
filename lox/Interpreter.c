@@ -188,6 +188,7 @@ static void * visit_assign_expr(const expr_t * p_expr, void * p_ctx) {
     object_t * p_value  = evaluate(expr.value, p_interpreter);
     check_runtime_error(p_ctx);
     const int distance = (int)map_get(p_interpreter->locals, p_expr);
+    // TODO not found should not give same result as distance = 0
     if (distance >= 0) {
         environment_assign_at(distance, expr.target->as.variable_expr.name,
             p_value, p_interpreter->environment);

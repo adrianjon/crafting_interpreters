@@ -1,4 +1,3 @@
-
 #include "extra/Arrays.h"
 #include "extra/Memory.h"
 #include "lox/Scanner.h"
@@ -13,7 +12,7 @@
 
 #include "extra/Stack.h"
 #include "extra/Map.h"
-
+#include "lox/Callable.h"
 
 int main(void) {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
@@ -58,7 +57,7 @@ int main(void) {
 
     interpreter_t * p_interpreter = new_interpreter();
     resolver_t * p_resolver = new_resolver(p_interpreter);
-    resolve_list(statements->data, statements->size / sizeof(stmt_t*) , p_resolver);
+    resolve_list(statements->data, statements->size / sizeof(stmt_t *), p_resolver);
     interpret(statements, p_interpreter);
     region_free(interpreter_region);
 

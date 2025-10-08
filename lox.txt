@@ -7,14 +7,16 @@ class Person {
     }
 }
 fun hello() {
-    print "hello";
     var y = 0;
-    fun x() {
-        print y + 1;
+    fun f() {
+        y = y + 1;
+        print y;
     }
-    return x;
+    return f;
 }
 var o = hello();
+o();
+o();
 o();
 
 //Person();

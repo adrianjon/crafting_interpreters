@@ -240,9 +240,10 @@ static void * visit_variable_expr(const expr_t * p_expr, void * p_ctx) {
     const expr_variable_t expr = p_expr->as.variable_expr;
     resolver_t * p_resolver = p_ctx;
     const map_t * scope = stack_peek(p_resolver->scopes);
-    if (!stack_is_empty(p_resolver->scopes) &&
-        !map_get(scope, expr.name->lexeme)) {
-        throw_error(p_resolver, "Can't read local variable in its own initializer.");
+   // void * is_var_defined = map_get(scope, expr.name->lexeme);
+    if (!stack_is_empty(p_resolver->scopes) && map_contains(scope, expr.name->lexeme)) {
+        if ((bool)map_get(scope, expr.name->lexeme) == false)
+            throw_error(p_resolver, "Can't read local variable in its own initializer.");
     }
     resolve_local(p_expr, expr.name, p_resolver);
     return NULL;

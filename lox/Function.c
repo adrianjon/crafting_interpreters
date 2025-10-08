@@ -62,23 +62,4 @@ stmt_function_t * get_function_declaration(const function_t * p_function) {
 object_t * function_call(const function_t * p_function, interpreter_t * p_interpreter,
     object_t ** pp_arguments) {
     return p_function->vtable->call(p_function, p_interpreter, pp_arguments);
-    // environment_t * p_env = new_environment(p_function->closure);
-    // for (size_t i = 0; i < *p_function->p_declaration->params_count; i++) {
-    //     environment_define(p_function->p_declaration->params[i]->lexeme,
-    //         pp_arguments[i], p_env);
-    // }
-    // //    environment_t * p_parent_env = get_interpreter_environment(p_interpreter);
-    //
-    // environment_t * previous = get_interpreter_environment(p_interpreter);
-    // set_interpreter_environment(p_interpreter, p_env);
-    // object_t * p_ret = NULL;
-    // for (size_t i = 0; i < *p_function->p_declaration->count; i++) {
-    //     p_ret = execute(p_function->p_declaration->body[i], p_interpreter);
-    //     if (p_ret) {
-    //         set_interpreter_environment(p_interpreter, previous);
-    //         return p_ret;
-    //     }
-    // }
-    // set_interpreter_environment(p_interpreter, previous);
-    // return NULL;
 }
