@@ -7,7 +7,6 @@
 #include "../extra/Memory.h"
 #include "Callable.h"
 #include "Function.h"
-#include "Instance.h"
 #include "Interpreter.h"
 #include "Object.h"
 #include "../extra/Map.h"

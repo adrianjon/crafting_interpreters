@@ -188,6 +188,7 @@ static void * visit_binary_expr(const expr_t * p_expr, void * p_ctx) {
     const expr_binary_t expr = p_expr->as.binary_expr;
     resolve_expr(expr.left, p_ctx);
     resolve_expr(expr.right, p_ctx);
+    return NULL;
 }
 static void * visit_call_expr(const expr_t * p_expr, void * p_ctx) {
     const expr_call_t expr = p_expr->as.call_expr;

@@ -3,10 +3,11 @@
 //
 
 #include "Object.h"
-
+#include "Callable.h"
 #include <stdlib.h>
 #include <string.h>
 
+#include "Class.h"
 #include "../extra/Memory.h"
 #include "Function.h"
 
@@ -14,12 +15,12 @@ const char* g_object_type_names[] = {
     "OBJECT_STRING",
     "OBJECT_NUMBER",
     "OBJECT_BOOLEAN",
-    "OBJECT_NATIVE",
     "OBJECT_FUNCTION",
     "OBJECT_CLASS",
+    "OBJECT_CALLABLE",
     "OBJECT_NIL",
 };
-
+// all callable types must start with a callable_vtable_t
 struct object {
     object_type_t type;
     union {
@@ -33,13 +34,16 @@ struct object {
             bool value;
         } boolean;
         struct {
-            object_t * (*fn)(int argc, object_t ** argv);
-            int arity;
-            char * name;
-        } native;
-        struct {
-            function_t * p_function;
+            callable_vtable_t vtable;
+            function_t * function;
         } function;
+        struct {
+            callable_vtable_t vtable;
+            class_t * class;
+        } class;
+        struct {
+            callable_vtable_t vtable;
+        } callable;
     } as;
 };
 
@@ -57,11 +61,12 @@ object_t * new_object(const object_type_t p_object_type, void * value) {
         case OBJECT_BOOLEAN:
             p_object->as.boolean.value = *(bool*)value;
             break;
-        case OBJECT_NATIVE:
-            break;
         case OBJECT_FUNCTION:
-            p_object->as.function.p_function = value;
-            break;
+            p_object->as.function.function = NULL;
+        case OBJECT_CLASS:
+            p_object->as.class.class = NULL;
+        case OBJECT_CALLABLE:
+            p_object->as.callable.vtable = *(callable_vtable_t*)value;
         case OBJECT_NIL:
         default:
             break;
@@ -85,9 +90,6 @@ double get_object_number (const object_t * p_object) {
 bool get_object_boolean (const object_t * p_object) {
     return p_object->as.boolean.value;
 }
-void * get_object_function (const object_t * p_object) {
-    return p_object->as.function.p_function;
-}
 void * copy_object_value( const object_t * p_object) {
     void * p_value = NULL;
     switch (p_object->type) {
@@ -106,13 +108,17 @@ void * copy_object_value( const object_t * p_object) {
             p_value = memory_allocate(sizeof(bool));
             *(bool*)p_value = p_object->as.boolean.value;
             break;
-        case OBJECT_NATIVE:
-            break;
-        case OBJECT_FUNCTION: // no deep copy of function
-            p_value = p_object->as.function.p_function;//new_function(get_function_declaration(p_object->as.function.p_function), NULL);
-            break;
         default:
             break;
     }
     return p_value;
+}
+
+void * call_object(const object_t * p_object, void * p_ctx, object_t ** arguments) {
+    if (p_object && p_object->type == OBJECT_CALLABLE ||
+        p_object && p_object->type == OBJECT_FUNCTION ||
+        p_object && p_object->type == OBJECT_CLASS) {
+        return p_object->as.callable.vtable.call(p_object, p_ctx, arguments);
+    }
+    return NULL;
 }

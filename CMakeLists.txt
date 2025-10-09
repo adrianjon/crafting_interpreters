@@ -19,19 +19,12 @@ add_executable(lox main.c
         lox/Interpreter.c
         lox/Function.c
         lox/Resolver.c
-        lox/Resolver.h
         extra/Map.c
-        extra/Map.h
         extra/Stack.c
-        extra/Stack.h
         lox/Class.c
-        lox/Class.h
         lox/Callable.c
-        lox/Callable.h
         lox/Enumerable.h
         extra/Interfaces.h
-        lox/Instance.c
-        lox/Instance.h
 )
 
 add_executable(GenerateAst tools/GenerateAst.c

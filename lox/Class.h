@@ -4,6 +4,9 @@
 
 #ifndef LOX_CLASS_H
 #define LOX_CLASS_H
+#include "Function.h"
+#include "Interpreter.h"
+#include "Object.h"
 
 typedef struct class class_t;
 

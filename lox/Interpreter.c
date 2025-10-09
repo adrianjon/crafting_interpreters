@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "Callable.h"
 #include "Parser.h"
 #include "Environment.h"
 #include "Function.h"
@@ -160,7 +161,6 @@ const char * stringify(const object_t * p_object) {
             snprintf(buffer, sizeof(buffer), "%g", get_object_number(p_object));
             break;
         case OBJECT_BOOLEAN:
-        case OBJECT_FUNCTION:
         case OBJECT_NIL:
         default:
             buffer[0] = '\0';
@@ -181,6 +181,10 @@ object_t * lookup_variable(token_t * p_name, const expr_t * p_expr, const interp
     }
     return environment_get(p_name, p_interpreter->globals);
 }
+static object_t * call(expr_t * callee, interpreter_t * p_interpreter, object_t ** arguments) {
+    return NULL;
+}
+
 // Private visitor functions
 static void * visit_assign_expr(const expr_t * p_expr, void * p_ctx) {
     const expr_assign_t expr = p_expr->as.assign_expr;
@@ -296,11 +300,11 @@ static void * visit_call_expr(const expr_t * p_expr, void * p_ctx) {
         throw_error(p_ctx, "BIG ERROR");
         return NULL;
     }
-    const object_t * callee = evaluate(expr.callee, p_ctx);
+    object_t * callee = evaluate(expr.callee, p_ctx);
     const object_type_t type = get_object_type(callee);
 
     // TODO shuld check if callable
-    if (type != OBJECT_FUNCTION && type != OBJECT_NATIVE && type != OBJECT_CLASS) {
+    if (type != OBJECT_CALLABLE) {
         throw_error(p_ctx, "Expected '%s' at line %d to be function object",
             expr.callee->as.variable_expr.name->lexeme,
             expr.callee->as.variable_expr.name->line);
@@ -313,7 +317,8 @@ static void * visit_call_expr(const expr_t * p_expr, void * p_ctx) {
         check_runtime_error(p_ctx);
     }
     //object_t * p_return =
-    void * p_return = function_call(get_object_function(callee), p_ctx, arguments);
+    //void * p_return = function_call(get_object_function(callee), p_ctx, arguments);
+    void * p_return = call_object(callee, p_ctx, arguments);
     return p_return;
 }
 static void * visit_get_expr(const expr_t * p_expr, void * p_ctx) {
