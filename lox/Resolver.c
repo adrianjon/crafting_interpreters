@@ -19,7 +19,8 @@
 
 enum function_type {
     FUNCTION_TYPE_NONE,
-    FUNCTION_TYPE_FUNCTION
+    FUNCTION_TYPE_FUNCTION,
+    FUNCTION_TYPE_METHOD,
 };
 
 struct resolver {
@@ -255,10 +256,14 @@ static void * visit_block_stmt(const stmt_t * p_stmt, void * p_ctx) {
     end_scope(p_ctx);
     return NULL;
 }
-static void * visit_class_stmt         (const stmt_t * p_stmt, void * p_ctx) {
+static void * visit_class_stmt(const stmt_t * p_stmt, void * p_ctx) {
     const stmt_class_t stmt = p_stmt->as.class_stmt;
     declare(stmt.name, p_ctx);
     define(stmt.name, p_ctx);
+    for (size_t i = 0; i < stmt.methods_count; i++) {
+        const enum function_type declaration = FUNCTION_TYPE_METHOD;
+        resolve_function(*stmt.methods[i], declaration, p_ctx);
+    }
     return NULL;
 }
 static void * visit_expression_stmt    (const stmt_t * p_stmt, void * p_ctx) {

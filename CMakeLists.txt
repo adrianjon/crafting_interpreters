@@ -30,6 +30,8 @@ add_executable(lox main.c
         lox/Callable.h
         lox/Enumerable.h
         extra/Interfaces.h
+        lox/Instance.c
+        lox/Instance.h
 )
 
 add_executable(GenerateAst tools/GenerateAst.c

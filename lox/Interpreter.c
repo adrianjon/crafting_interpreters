@@ -187,13 +187,14 @@ static void * visit_assign_expr(const expr_t * p_expr, void * p_ctx) {
     interpreter_t * p_interpreter = p_ctx;
     object_t * p_value  = evaluate(expr.value, p_interpreter);
     check_runtime_error(p_ctx);
-    const int distance = (int)map_get(p_interpreter->locals, p_expr);
-    // TODO not found should not give same result as distance = 0
-    if (distance >= 0) {
-        environment_assign_at(distance, expr.target->as.variable_expr.name,
-            p_value, p_interpreter->environment);
+    if (map_contains(p_interpreter->locals, expr.target)) {
+        const int distance = (int)map_get(p_interpreter->locals, expr.target);
+        if (distance >= 0) {
+            environment_assign_at(distance, expr.target->as.variable_expr.name,
+                p_value, p_interpreter->environment);
+        }
     } else {
-        environment_assign(p_expr->as.variable_expr.name,
+        environment_assign(expr.target->as.variable_expr.name,
             p_value, p_interpreter->globals);
     }
     return p_value;
@@ -298,8 +299,8 @@ static void * visit_call_expr(const expr_t * p_expr, void * p_ctx) {
     const object_t * callee = evaluate(expr.callee, p_ctx);
     const object_type_t type = get_object_type(callee);
 
-    if (type != OBJECT_FUNCTION &&
-        type != OBJECT_NATIVE) {
+    // TODO shuld check if callable
+    if (type != OBJECT_FUNCTION && type != OBJECT_NATIVE && type != OBJECT_CLASS) {
         throw_error(p_ctx, "Expected '%s' at line %d to be function object",
             expr.callee->as.variable_expr.name->lexeme,
             expr.callee->as.variable_expr.name->line);

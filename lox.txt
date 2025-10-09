@@ -6,17 +6,5 @@ class Person {
         return d + 1;
     }
 }
-fun hello() {
-    var y = 0;
-    fun f() {
-        y = y + 1;
-        print y;
-    }
-    return f;
-}
-var o = hello();
-o();
-o();
-o();
 
-//Person();
+var p1 = Person();
