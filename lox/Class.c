@@ -14,8 +14,9 @@
 
 typedef struct instance {
     class_t * p_class;
+    map_t * fields; // <char*, object_t*>
 } instance_t;
-
+// TODO needs to bind methods to instances
 instance_t * new_instance(class_t * p_class) {
     instance_t * instance = memory_allocate(sizeof(instance_t));
     instance->p_class = p_class;
@@ -40,7 +41,7 @@ static object_t * class_call(const void * self, interpreter_t * p_interpreter, o
     const instance_t * p_self = self;
     function_t * initializer = find_method(p_self->p_class, "init");
     if (initializer) {
-
+        function_call(initializer, p_interpreter, pp_arguments);
     }
     return NULL;
 }
