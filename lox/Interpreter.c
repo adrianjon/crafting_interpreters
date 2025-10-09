@@ -20,7 +20,7 @@
 struct interpreter {
     environment_t * globals;
     environment_t * environment;
-    map_t * locals;
+    map_t * locals; // <expr_t*, int>
     expr_visitor_t expr_visitor;
     stmt_visitor_t stmt_visitor;
     bool had_runtime_error;
@@ -181,9 +181,6 @@ object_t * lookup_variable(token_t * p_name, const expr_t * p_expr, const interp
     }
     return environment_get(p_name, p_interpreter->globals);
 }
-static object_t * call(expr_t * callee, interpreter_t * p_interpreter, object_t ** arguments) {
-    return NULL;
-}
 
 // Private visitor functions
 static void * visit_assign_expr(const expr_t * p_expr, void * p_ctx) {
@@ -300,11 +297,11 @@ static void * visit_call_expr(const expr_t * p_expr, void * p_ctx) {
         throw_error(p_ctx, "BIG ERROR");
         return NULL;
     }
-    object_t * callee = evaluate(expr.callee, p_ctx);
+    const object_t * callee = evaluate(expr.callee, p_ctx);
     const object_type_t type = get_object_type(callee);
 
     // TODO shuld check if callable
-    if (type != OBJECT_CALLABLE) {
+    if (type != OBJECT_CALLABLE && type != OBJECT_CLASS && type != OBJECT_FUNCTION) {
         throw_error(p_ctx, "Expected '%s' at line %d to be function object",
             expr.callee->as.variable_expr.name->lexeme,
             expr.callee->as.variable_expr.name->line);
@@ -316,8 +313,6 @@ static void * visit_call_expr(const expr_t * p_expr, void * p_ctx) {
         arguments[i] = evaluate(expr.arguments[i], p_ctx);
         check_runtime_error(p_ctx);
     }
-    //object_t * p_return =
-    //void * p_return = function_call(get_object_function(callee), p_ctx, arguments);
     void * p_return = call_object(callee, p_ctx, arguments);
     return p_return;
 }
@@ -423,7 +418,8 @@ static void * visit_function_stmt(const stmt_t * p_stmt, void * p_ctx) {
 
 
     function_t * p_function = new_function(stmt, ((interpreter_t*)p_ctx)->environment);
-    object_t * p_object = new_object(OBJECT_FUNCTION, p_function);
+
+    object_t * p_object = new_object(OBJECT_CALLABLE, p_function);
     environment_define(stmt->name->lexeme, p_object, ((interpreter_t*)p_ctx)->environment);
     return NULL;
 }

@@ -57,7 +57,7 @@ typedef struct {
 typedef struct {
 	token_t * name;
 	expr_t ** superclass;
-	stmt_function_t ** methods;
+	stmt_t ** methods;
 	size_t methods_count;
 	
 } stmt_class_t;

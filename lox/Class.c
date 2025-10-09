@@ -31,17 +31,30 @@ int class_arity(void * self) {
     return 0;
 }
 static function_t * find_method(const class_t * self, const char * name) {
-    if (map_contains(self->functions, name)) {
+    if (self->functions && map_contains(self->functions, name)) {
         return map_get(self->functions, name);
     }
     return NULL;
 }
 static object_t * class_call(const void * self, interpreter_t * p_interpreter, object_t ** pp_arguments) {
-    const instance_t * p_self = self;
-    function_t * initializer = find_method(p_self->p_class, "init");
+    const object_t * p_object = self;
+    class_t * p_class = get_object_value(p_object);
+    instance_t * p_instance = new_instance(p_class);
+    //p_instance->fields
+    const function_t * initializer = find_method(p_class, "init");
     if (initializer) {
         function_call(initializer, p_interpreter, pp_arguments);
+    } else {
+        // no initializer found, use generic by binding all methods to instance
+
+
+        // p_instance->fields
     }
+    // const instance_t * p_self = self;
+    // function_t * initializer = find_method(p_self->p_class, "init");
+    // if (initializer) {
+    //     function_call(initializer, p_interpreter, pp_arguments);
+    // }
     return NULL;
 }
 
@@ -49,7 +62,9 @@ static callable_vtable_t class_vtable = {
     .arity = class_arity,
     .call = class_call,
 };
-
+callable_vtable_t * get_class_vtable(void) {
+    return &class_vtable;
+}
 class_t * new_class(const char * name) {
     class_t * p_class = memory_allocate(sizeof(class_t));
     p_class->name = name;

@@ -26,7 +26,7 @@ static const char* ast_expr_grammar[] = {
 static const char* ast_stmt_grammar[] = {
       "block    : stmt_t ** statements, size_t * count",
       "function   : token_t* name, token_t ** params, size_t * params_count, stmt_t ** body, size_t * count",
-      "class     : token_t * name, expr_t ** superclass, stmt_function_t ** methods, size_t methods_count",
+      "class     : token_t * name, expr_t ** superclass, stmt_t ** methods, size_t methods_count",
       "expression : expr_t * expression",
       "if         : expr_t * condition, stmt_t * then_branch, stmt_t * else_branch",
       "print     : expr_t * expression",

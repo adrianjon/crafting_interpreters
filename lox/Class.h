@@ -11,5 +11,6 @@
 typedef struct class class_t;
 
 class_t * new_class(const char * name);
+callable_vtable_t * get_class_vtable(void);
 
 #endif //LOX_CLASS_H

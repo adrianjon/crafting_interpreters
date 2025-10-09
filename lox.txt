@@ -8,3 +8,5 @@ class Person {
 }
 
 var p1 = Person();
+
+print p1;

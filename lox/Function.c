@@ -45,6 +45,9 @@ static callable_vtable_t function_vtable = {
     .arity = arity,
     .call = call
 };
+callable_vtable_t * get_function_vtable(void) {
+    return &function_vtable;
+}
 function_t * new_function(stmt_function_t * p_declaration, environment_t * closure) {
     function_t * p_new = memory_allocate(sizeof(function_t));
     p_new->p_declaration = p_declaration;

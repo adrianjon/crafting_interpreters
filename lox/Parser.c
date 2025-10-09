@@ -502,7 +502,8 @@ static stmt_t * class_declaration(parser_t * p_parser) {
     dynamic_array_t * methods = create_array(2 * sizeof(stmt_t*));
     size_t n = 0;
     while (!token_check(p_parser, RIGHT_BRACE) && !token_is_at_end(p_parser)) {
-        array_push(methods, fun_declaration(p_parser, "method"),
+        stmt_t * f = fun_declaration(p_parser, "method");
+        array_push(methods, &f,
             sizeof(stmt_t*));
         n++;
     }

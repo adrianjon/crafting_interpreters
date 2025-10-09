@@ -263,7 +263,7 @@ static void * visit_class_stmt(const stmt_t * p_stmt, void * p_ctx) {
     define(stmt.name, p_ctx);
     for (size_t i = 0; i < stmt.methods_count; i++) {
         const enum function_type declaration = FUNCTION_TYPE_METHOD;
-        resolve_function(*stmt.methods[i], declaration, p_ctx);
+        resolve_function(stmt.methods[i]->as.function_stmt, declaration, p_ctx);
     }
     return NULL;
 }
