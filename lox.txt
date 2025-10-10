@@ -7,6 +7,8 @@ class Person {
     }
 }
 
-var p1 = Person();
+talk("hej");
 
-print p1;
+//var p1 = Person();
+
+//print p1;

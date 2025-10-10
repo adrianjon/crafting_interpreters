@@ -20,7 +20,7 @@ static int arity(void * self) {
     return 0;
 }
 static object_t * call(const void * self, interpreter_t * p_interpreter, object_t ** pp_arguments) {
-    const function_t * p_function = self;
+    const function_t * p_function = get_object_value(self);
     environment_t * p_env = new_environment(p_function->closure);
     for (size_t i = 0; i < *p_function->p_declaration->params_count; i++) {
         environment_define(p_function->p_declaration->params[i]->lexeme,

@@ -36,7 +36,7 @@ environment_t * new_environment(environment_t * p_enclosing) {
 
 object_t * environment_get(token_t * p_name, environment_t * p_env) {
     if (map_contains(p_env->values, p_name->lexeme)) {
-         return map_get(p_env->values, p_env->values);
+         return map_get(p_env->values, p_name->lexeme);
     }
     if (p_env->enclosing) return environment_get(p_name, p_env->enclosing);
 

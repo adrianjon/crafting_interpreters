@@ -69,5 +69,10 @@ class_t * new_class(const char * name) {
     class_t * p_class = memory_allocate(sizeof(class_t));
     p_class->name = name;
     p_class->vtable = &class_vtable;
+    p_class->functions = map_create(8, (map_config_t){0});
     return p_class;
+}
+void class_add_method(class_t * p_class, const char * key, function_t * value) {
+    if (!p_class) return;
+    map_put(p_class->functions, key, value);
 }

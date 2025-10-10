@@ -176,7 +176,7 @@ bool is_truthy(const object_t * p_obj) {
 }
 object_t * lookup_variable(token_t * p_name, const expr_t * p_expr, const interpreter_t * p_interpreter) {
     const int distance = (int)map_get(p_interpreter->locals, p_expr);
-    if (distance >= 0) {
+    if (map_contains(p_interpreter->locals, p_expr) && distance >= 0) {
         return environment_get_at(distance, p_name->lexeme, p_interpreter->environment);
     }
     return environment_get(p_name, p_interpreter->globals);
@@ -397,8 +397,24 @@ static void * visit_block_stmt(const stmt_t * p_stmt, void * p_ctx) {
 static void * visit_class_stmt(const stmt_t * p_stmt, void * p_ctx) {
     const stmt_class_t stmt = p_stmt->as.class_stmt;
     environment_define(stmt.name->lexeme, NULL, ((interpreter_t*)p_ctx)->environment);
+
     class_t * p_class = new_class(stmt.name->lexeme);
+    interpreter_t * p_interpreter = p_ctx;
+    environment_t * previous = p_interpreter->environment;
+    environment_t * class_env = new_environment(NULL);
+    p_interpreter->environment = class_env;
+    for (size_t i = 0; i < stmt.methods_count; i++) {
+        execute(stmt.methods[i], p_ctx);
+        token_t * method_name = stmt.methods[i]->as.function_stmt.name;
+        const object_t * method_obj = environment_get(method_name, class_env);
+        if (get_object_type(method_obj) != OBJECT_FUNCTION) {
+            exit(1);
+        }
+        class_add_method(p_class, method_name->lexeme, get_object_value(method_obj));
+    }
+
     object_t * p_object = new_object(OBJECT_CLASS, p_class);
+    p_interpreter->environment = previous;
     environment_assign(stmt.name, p_object, ((interpreter_t*)p_ctx)->environment);
     return NULL;
 }
@@ -419,7 +435,7 @@ static void * visit_function_stmt(const stmt_t * p_stmt, void * p_ctx) {
 
     function_t * p_function = new_function(stmt, ((interpreter_t*)p_ctx)->environment);
 
-    object_t * p_object = new_object(OBJECT_CALLABLE, p_function);
+    object_t * p_object = new_object(OBJECT_FUNCTION, p_function);
     environment_define(stmt->name->lexeme, p_object, ((interpreter_t*)p_ctx)->environment);
     return NULL;
 }
