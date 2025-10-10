@@ -9,8 +9,10 @@
 #include "Object.h"
 
 typedef struct class class_t;
+typedef struct instance instance_t;
 
 class_t * new_class(const char * name);
 callable_vtable_t * get_class_vtable(void);
 void class_add_method(class_t * p_class, const char * key, function_t * value);
+const char * instance_get_class_name(const instance_t * p_instance);
 #endif //LOX_CLASS_H

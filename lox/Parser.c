@@ -22,7 +22,7 @@
     factor         → unary ( ( "/" | "*" ) unary )* ;
     unary          → ( "!" | "-" ) unary
                    | call ;
-    call           → primary ( "(" arguments? ")" ) ;
+    call           → primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
     arguments      → expression ( "," expression )* ;
     primary        → NUMBER | STRING | "true" | "false" | "nil"
                    | "(" expression ")" | IDENTIFIER ;
@@ -314,9 +314,20 @@ static expr_t * finish_call(parser_t * p_parser, expr_t * callee) {
 }
 static expr_t * parse_call(parser_t * p_parser) {
     expr_t * expr = parse_primary(p_parser);
-
-    if (token_match(p_parser, 1, LEFT_PAREN)) {
-        expr = finish_call(p_parser, expr);
+    while (true) {
+        if (token_match(p_parser, 1, LEFT_PAREN)) {
+            expr = finish_call(p_parser, expr);
+        } else if (token_match(p_parser, 1, DOT)) {
+            token_t name = consume(p_parser, IDENTIFIER,
+                "Expected property name after '.'.");
+            expr_t * temp = expr;
+            expr = memory_allocate(sizeof(expr_t));
+            expr->type = EXPR_GET;
+            expr->as.get_expr.name = &name;
+            expr->as.get_expr.object = temp;
+        } else {
+            break;
+        }
     }
     return expr;
 }

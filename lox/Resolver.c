@@ -199,8 +199,7 @@ static void * visit_call_expr(const expr_t * p_expr, void * p_ctx) {
     return NULL;
 }
 static void * visit_get_expr(const expr_t * p_expr, void * p_ctx) {
-    throw_error(p_ctx, "Unimplemented expression: %s (%d)",
-        g_expr_type_names[p_expr->type], p_expr->type);
+    resolve_expr(p_expr->as.get_expr.object, p_ctx);
     return NULL;
 }
 static void * visit_grouping_expr      (const expr_t * p_expr, void * p_ctx) {

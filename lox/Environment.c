@@ -40,7 +40,7 @@ object_t * environment_get(token_t * p_name, environment_t * p_env) {
     }
     if (p_env->enclosing) return environment_get(p_name, p_env->enclosing);
 
-    fprintf(stderr, "Undefined variable ''.");
+    fprintf(stderr, "Undefined variable '%s' at line %d.\n", p_name->lexeme, p_name->line);
     exit(EXIT_FAILURE);
 }
 void environment_assign(token_t * p_name, object_t * p_value, environment_t * p_env) {
@@ -53,7 +53,7 @@ void environment_assign(token_t * p_name, object_t * p_value, environment_t * p_
         return;
     }
 
-    fprintf(stderr, "Undefined variable ''.");
+    fprintf(stderr, "Undefined variable '%s' at line %d.\n", p_name->lexeme, p_name->line);
     exit(EXIT_FAILURE);
 }
 void environment_define(const char * p_name, object_t * p_value,

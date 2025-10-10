@@ -19,6 +19,7 @@ typedef enum {
     OBJECT_FUNCTION,
     OBJECT_CLASS,
     OBJECT_CALLABLE,
+    OBJECT_INSTANCE,
     OBJECT_NIL,
 } object_type_t;
 // OBJECT_INSTANCE should probably be another type

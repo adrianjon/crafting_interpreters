@@ -18,6 +18,7 @@ const char* g_object_type_names[] = {
     "OBJECT_FUNCTION",
     "OBJECT_CLASS",
     "OBJECT_CALLABLE",
+    "OBJECT_INSTANCE"
     "OBJECT_NIL",
 };
 // all callable types must start with a callable_vtable_t
@@ -44,6 +45,9 @@ struct object {
         struct {
             callable_vtable_t * vtable;
         } callable;
+        struct {
+            instance_t * instance;
+        } instance;
     } as;
 };
 
@@ -71,6 +75,10 @@ object_t * new_object(const object_type_t p_object_type, void * value) {
             break;
         case OBJECT_CALLABLE:
             p_object->as.callable.vtable = NULL;
+            break;
+        case OBJECT_INSTANCE:
+            p_object->as.instance.instance = value;
+            break;
         case OBJECT_NIL:
         default:
             break;
@@ -108,6 +116,9 @@ void * get_object_value(const object_t * p_object) {
         case OBJECT_CLASS:
             return p_object->as.class.class;
         case OBJECT_CALLABLE:
+            return NULL;
+        case OBJECT_INSTANCE:
+            return p_object->as.instance.instance;
         case OBJECT_NIL:
         default:
             break;

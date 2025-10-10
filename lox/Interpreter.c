@@ -161,6 +161,11 @@ const char * stringify(const object_t * p_object) {
             snprintf(buffer, sizeof(buffer), "%g", get_object_number(p_object));
             break;
         case OBJECT_BOOLEAN:
+        case OBJECT_INSTANCE:
+            const instance_t * p_instance = get_object_value(p_object);
+            snprintf(buffer, sizeof(buffer), "Instance of '%s'",
+                instance_get_class_name(p_instance));
+            break;
         case OBJECT_NIL:
         default:
             buffer[0] = '\0';
