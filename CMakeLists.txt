@@ -37,4 +37,9 @@ add_executable(lox2 lox2/lox_main.c
         tools/generate_ast_v2.c
         lox2/expr.c
         lox2/stmt.c
-        lox2/token.h)
+        lox2/token.h
+        lox2/scanner.c
+        lox2/list.h
+        lox2/parser.c
+        lox2/interpreter.c
+        lox2/resolver.c)
