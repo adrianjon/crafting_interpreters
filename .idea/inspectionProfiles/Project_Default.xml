@@ -1,7 +1,47 @@
 <component name="InspectionProjectProfileManager">
   <profile version="1.0">
     <option name="myName" value="Project Default" />
+    <inspection_tool class="5c419be4-8603-3909-9924-4e2974d0e097" enabled="false" level="ERROR" enabled_by_default="false" editorAttributes="ERRORS_ATTRIBUTES" />
     <inspection_tool class="CppInconsistentNaming" enabled="true" level="WARNING" enabled_by_default="true" editorAttributes="WARNING_ATTRIBUTES" />
+    <inspection_tool class="CustomRegExpInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="myConfigurations">
+        <list>
+          <RegExpInspectionConfiguration>
+            <option name="description" value="C keyword to avoid for embedded development.&#10;From the Embedded C coding standard by M.Barr" />
+            <option name="name" value="C keywords to avoid" />
+            <option name="uuid" value="5c419be4-8603-3909-9924-4e2974d0e097" />
+            <option name="patterns">
+              <list>
+                <InspectionPattern>
+                  <option name="regExp" value="\bgoto\b" />
+                  <option name="_fileType" value="C/C++" />
+                  <option name="searchContext" value="ANY" />
+                  <option name="flags" value="64" />
+                </InspectionPattern>
+                <InspectionPattern>
+                  <option name="regExp" value="\bauto\b" />
+                  <option name="_fileType" value="C/C++" />
+                  <option name="searchContext" value="ANY" />
+                  <option name="flags" value="64" />
+                </InspectionPattern>
+                <InspectionPattern>
+                  <option name="regExp" value="\bregister\b" />
+                  <option name="_fileType" value="C/C++" />
+                  <option name="searchContext" value="ANY" />
+                  <option name="flags" value="64" />
+                </InspectionPattern>
+                <InspectionPattern>
+                  <option name="regExp" value="\bcontinue\b" />
+                  <option name="_fileType" value="C/C++" />
+                  <option name="searchContext" value="ANY" />
+                  <option name="flags" value="64" />
+                </InspectionPattern>
+              </list>
+            </option>
+          </RegExpInspectionConfiguration>
+        </list>
+      </option>
+    </inspection_tool>
     <inspection_tool class="GrazieInspection" enabled="false" level="GRAMMAR_ERROR" enabled_by_default="false" />
     <inspection_tool class="LanguageDetectionInspection" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
     <inspection_tool class="Misra" enabled="true" level="WARNING" enabled_by_default="true" />

@@ -5,6 +5,7 @@ set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 
+
 add_executable(lox main.c
         extra/Arrays.c
         extra/Memory.c
@@ -32,3 +33,8 @@ add_executable(GenerateAst tools/GenerateAst.c
         extra/Memory.c
         extra/Windows.c
 )
+add_executable(lox2 lox2/lox_main.c
+        tools/generate_ast_v2.c
+        lox2/expr.c
+        lox2/stmt.c
+        lox2/token.h)
