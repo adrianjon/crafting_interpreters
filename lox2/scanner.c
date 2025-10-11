@@ -9,14 +9,19 @@
 static bool scanner_is_at_end(scanner_t const * p_scanner);
 static token_t * scan_token(scanner_t * p_scanner);
 list_t scan_tokens(scanner_t * p_scanner) {
+    if (!p_scanner->start) {
+        fprintf(stderr, "Error: No source to scan through.");
+        exit(EXIT_FAILURE);
+    }
     list_t tokens = {0};
     tokens.free_fn = token_free;
     p_scanner->p_current = p_scanner->start;
+    p_scanner->p_previous = NULL;
     p_scanner->line = 1;
     while (!scanner_is_at_end(p_scanner)) {
         token_t * p_token = scan_token(p_scanner);
         if (p_token) list_add(&tokens, p_token);
-        p_scanner->p_previous = p_scanner->p_current++;
+        p_scanner->p_previous = p_scanner->p_current;
     }
 
     list_add(&tokens, new_token(END_OF_FILE, "", p_scanner->line));
@@ -29,44 +34,60 @@ static bool scanner_is_at_end(scanner_t const * p_scanner) {
 static token_t * scan_token(scanner_t * p_scanner) {
     switch (*p_scanner->p_current) {
         case '(':
+            p_scanner->p_current++;
             return new_token(LEFT_PAREN, "(", p_scanner->line);
         case ')':
+            p_scanner->p_current++;
             return new_token(RIGHT_PAREN, ")", p_scanner->line);
         case '{':
+            p_scanner->p_current++;
             return new_token(LEFT_BRACE, "{", p_scanner->line);
         case '}':
+            p_scanner->p_current++;
             return new_token(RIGHT_BRACE, "}", p_scanner->line);
         case ',':
+            p_scanner->p_current++;
             return new_token(COMMA, ",", p_scanner->line);
         case '.':
+            p_scanner->p_current++;
             return new_token(DOT, ".", p_scanner->line);
         case '+':
+            p_scanner->p_current++;
             return new_token(PLUS, "+", p_scanner->line);
         case '-':
+            p_scanner->p_current++;
             return new_token(MINUS, "-", p_scanner->line);
         case ';':
+            p_scanner->p_current++;
             return new_token(SEMICOLON, ";", p_scanner->line);
         case ':':
+            p_scanner->p_current++;
             return new_token(COLON, ":", p_scanner->line);
         case '*':
+            p_scanner->p_current++;
             return new_token(STAR, "*", p_scanner->line);
         case '%':
+            p_scanner->p_current++;
             return new_token(PERCENTAGE, "%", p_scanner->line);
         case '!':
-            bool is_equal = *++p_scanner->p_current == '=';
+            bool is_equal = *(p_scanner->p_current + 1) == '=';
+            if (is_equal) p_scanner->p_current+=2;
+            else p_scanner->p_current+=1;
             return new_token(is_equal ? BANG_EQUAL : BANG,
                 is_equal ? "!=" : "!", p_scanner->line);
         case '=':
-            is_equal = *++p_scanner->p_current == '=';
+            is_equal = *(p_scanner->p_current + 1) == '=';
+            if (is_equal) p_scanner->p_current+=2;
+            else p_scanner->p_current+=1;
             return new_token(is_equal ? EQUAL_EQUAL : EQUAL,
                 is_equal ? "==" : "=", p_scanner->line);
         case '<':
             is_equal = *++p_scanner->p_current == '=';
-            return new_token(is_equal ? EQUAL_EQUAL : EQUAL,
+            return new_token(is_equal ? LESS_EQUAL : LESS,
                 is_equal ? "<=" : "<", p_scanner->line);
         case '>':
             is_equal = *++p_scanner->p_current == '=';
-            return new_token(is_equal ? EQUAL_EQUAL : EQUAL,
+            return new_token(is_equal ? GREATER_EQUAL : GREATER,
                 is_equal ? ">=" : ">", p_scanner->line);
         case '/':
             if (*(p_scanner->p_current + 1) == '/') { // single line comment
@@ -105,12 +126,14 @@ static token_t * scan_token(scanner_t * p_scanner) {
         case ' ':
         case '\r':
         case '\t':
+            p_scanner->p_current++;
             break;
         case '\n':
+            p_scanner->p_current++;
             p_scanner->line++;
             break;
         case '"':
-            p_scanner->p_previous = p_scanner->p_current + 1;
+            p_scanner->p_previous = p_scanner->p_current;
             while (!scanner_is_at_end(p_scanner) && *++p_scanner->p_current != '"')
                 if (*p_scanner->p_current == '\\' && *(p_scanner->p_current + 1) == '"')
                     p_scanner->p_current+=1;
@@ -118,7 +141,7 @@ static token_t * scan_token(scanner_t * p_scanner) {
                 fprintf(stderr, "Error: Unterminated string");
                 exit(EXIT_FAILURE);
             }
-
+            p_scanner->p_current++;
             size_t const lexeme_length = p_scanner->p_current - p_scanner->p_previous;
             char * lexeme = malloc(lexeme_length + 1);
             memcpy(lexeme, p_scanner->p_previous, lexeme_length);
@@ -134,7 +157,7 @@ static token_t * scan_token(scanner_t * p_scanner) {
                     p_scanner->p_current++;
                 }
                 if (*p_scanner->p_current == '.' &&
-                    (*p_scanner->p_current >= '0' && *p_scanner->p_current <= '9')) {
+                    (*(p_scanner->p_current + 1) >= '0' && *(p_scanner->p_current + 1) <= '9')) {
                     p_scanner->p_current++;
                     while (*p_scanner->p_current >= '0' && *p_scanner->p_current <= '9') {
                         p_scanner->p_current++;
@@ -146,7 +169,6 @@ static token_t * scan_token(scanner_t * p_scanner) {
                 lexeme[lexeme_length] = '\0';
                 token_t * t = new_token(NUMBER, lexeme, p_scanner->line);
                 free(lexeme);
-                p_scanner->p_current--;
                 return t;
             }
             if ((*p_scanner->p_current >= 'A' && *p_scanner->p_current <= 'Z') ||

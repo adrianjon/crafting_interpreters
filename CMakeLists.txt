@@ -42,4 +42,5 @@ add_executable(lox2 lox2/lox_main.c
         lox2/list.h
         lox2/parser.c
         lox2/interpreter.c
-        lox2/resolver.c)
+        lox2/resolver.c
+        lox2/test_scanner.h)

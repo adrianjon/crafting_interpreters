@@ -14,6 +14,8 @@
 #include "resolver.h"
 #include "list.h"
 
+#include "test_scanner.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -41,7 +43,11 @@ int main() {
     interpreter_t interpreter = {0};
 
     scanner_t scanner = { .start = p_source };
+    run_scanner_tests(&scanner);
     list_t tokens = scan_tokens(&scanner); // List<token_t>
+    // for (int i = 0; i < tokens.count; i++) {
+    //     printf("Token %d: %s\n", i, ((token_t*)tokens.data[i])->lexeme);
+    // }
     parser_t parser = { .tokens = tokens };
     list_free(&tokens);
     // list_t statements = parse(&parser); // List<stmt_t>
