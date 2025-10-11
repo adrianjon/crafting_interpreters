@@ -8,7 +8,7 @@
 #include <stddef.h>
 
 static char const * g_ast_expr_grammar[] = {
-    "assign   : expr_t * target, expr_t * value",
+    "assign   : token_t * target, expr_t * value",
     "binary   : expr_t * left, token_t * operator, expr_t * right",
     "call     : expr_t * callee, token_t * paren, expr_t ** arguments, size_t count",
     "get      : expr_t * object, token_t * name",

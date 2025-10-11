@@ -42,7 +42,7 @@ typedef enum {
 } expr_type_t;
 
 typedef struct {
-	 expr_t * target;
+	 token_t * target;
 	 expr_t * value;
 } expr_assign_t;
 

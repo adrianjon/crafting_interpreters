@@ -43,19 +43,15 @@ int main() {
     interpreter_t interpreter = {0};
 
     scanner_t scanner = { .start = p_source };
-    run_scanner_tests(&scanner);
+    //run_scanner_tests(&scanner);
+
     list_t tokens = scan_tokens(&scanner); // List<token_t>
-    // for (int i = 0; i < tokens.count; i++) {
-    //     printf("Token %d: %s\n", i, ((token_t*)tokens.data[i])->lexeme);
-    // }
+    for (int i = 0; i < tokens.count; i++)
+        printf("Token %d: %s\n", i, ((token_t*)tokens.data[i])->lexeme);
+
     parser_t parser = { .tokens = tokens };
+    list_t statements = parse(&parser); // List<stmt_t>
     list_free(&tokens);
-    // list_t statements = parse(&parser); // List<stmt_t>
-    // if (error) exit(EXIT_FAILURE);
-    // resolver_t resolver = { .interpreter = interpreter };
-    // resolve(&resolver, &statements);
-    // if (error) exit(EXIT_FAILURE);
-    // interpret(&interpreter, &statements);
     return 0;
 }
 

@@ -11,8 +11,9 @@
 
 typedef struct {
     list_t tokens; // List<stmt_t>
+    int current_index;
     token_t * p_previous;
-    token_t * current_p;
+    token_t * p_current;
     bool had_error;
 } parser_t;
 
