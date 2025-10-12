@@ -6,6 +6,7 @@
 
 #include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static int string_to_uppercase(char * dest, size_t dest_size, char const * source);
@@ -146,5 +147,17 @@ static int string_to_uppercase(char * dest, size_t const dest_size, char const *
         i++;
     }
     dest[i] = '\0'; // If buffer was not empty before use
+    return 0;
+}
+static void build_ast(void) {
+    char const * target_dir = "./lox2";
+    if (!generate_ast(target_dir, "expr", g_ast_expr_grammar) ||
+        !generate_ast(target_dir, "stmt", g_ast_stmt_grammar)) {
+        fprintf(stderr, "Failed to generate ast\n");
+        exit(EXIT_FAILURE);
+        }
+}
+int main(void) {
+    build_ast();
     return 0;
 }

@@ -4,7 +4,10 @@ project(lox C)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-
+include_directories(
+        ${PROJECT_SOURCE_DIR}/lox2
+        ${PROJECT_SOURCE_DIR}/lox2/tests
+)
 
 add_executable(lox main.c
         extra/Arrays.c
@@ -28,13 +31,9 @@ add_executable(lox main.c
         extra/Interfaces.h
 )
 
-add_executable(GenerateAst tools/GenerateAst.c
-        extra/Arrays.c
-        extra/Memory.c
-        extra/Windows.c
-)
+add_executable(ast_generator tools/generate_ast_v2.c)
+
 add_executable(lox2 lox2/lox_main.c
-        tools/generate_ast_v2.c
         lox2/expr.c
         lox2/stmt.c
         lox2/token.h
@@ -43,4 +42,18 @@ add_executable(lox2 lox2/lox_main.c
         lox2/parser.c
         lox2/interpreter.c
         lox2/resolver.c
-        lox2/test_scanner.h)
+        lox2/utils/map.c
+        lox2/utils/stack.c
+)
+
+add_executable(test lox2/tests/test_main.c
+        lox2/tests/scanner/test_scanner.c
+        lox2/tests/parser/test_parser.c
+        lox2/expr.c
+        lox2/stmt.c
+        lox2/scanner.c
+        lox2/parser.c
+        lox2/interpreter.c
+        lox2/resolver.c
+        lox2/tests/resolver/test_resolver.c
+)

@@ -9,7 +9,7 @@
 static bool scanner_is_at_end(scanner_t const * p_scanner);
 static token_t * scan_token(scanner_t * p_scanner);
 list_t scan_tokens(scanner_t * p_scanner) {
-    if (!p_scanner->start) {
+    if (!p_scanner || !p_scanner->start) {
         fprintf(stderr, "Error: No source to scan through.");
         exit(EXIT_FAILURE);
     }

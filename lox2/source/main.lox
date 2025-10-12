@@ -1,1 +1,6 @@
 x = 10;
+if (a) {
+    print "hello";
+} else {
+    y = 5;
+}

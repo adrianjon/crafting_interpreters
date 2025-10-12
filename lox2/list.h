@@ -8,6 +8,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+/*
+ * list_t:
+ *   A generic list that stores pointers to custom data.
+ *   User provides a free_fn suitable to their data.
+ */
 typedef struct {
     void ** data;
     size_t count;

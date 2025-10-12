@@ -2,20 +2,26 @@
 // Created by adrian on 2025-10-11.
 //
 
-#ifndef LOX_TEST_SCANNER_H
-#define LOX_TEST_SCANNER_H
 
 #include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "scanner.h"
 #include "list.h"
+
+int run_scanner_tests(scanner_t * p_scanner);
+
+static bool token_equal(token_t const * e, token_t const * a);
+static bool compare_tokens(list_t const * actual, list_t const * expected);
+
 //
 // Test case 1: simple arithmetic expression
 //
-static const char * test_source_1 =
+static char const * g_test_source_1 =
     "1 + 2 * (3 - 4) / 5;";
 
-static const list_t expected_tokens_1 = {
+static list_t const EXPECTED_TOKENS_1 = {
     .data = (void *[]) {
         /* 1 */ &(token_t){ .type = NUMBER,      .lexeme = "1", .line = 1 },
         /* + */ &(token_t){ .type = PLUS,        .lexeme = "+", .line = 1 },
@@ -31,16 +37,19 @@ static const list_t expected_tokens_1 = {
         /* ; */ &(token_t){ .type = SEMICOLON,   .lexeme = ";", .line = 1 },
         /* EOF */ &(token_t){ .type = END_OF_FILE, .lexeme = "", .line = 1 },
         NULL
-    }
+    },
+    .count = 13,
+    .capacity = 16,
+    .free_fn = NULL
 };
 
 //
 // Test case 2: string literals, comparisons, keywords, and boolean operators
 //
-static const char * test_source_2 =
+static char const * g_test_source_2 =
     "\"hello\" != \"\\\"world\" and true or false; var x = 42;";
 
-static const list_t expected_tokens_2 = {
+static list_t const EXPECTED_TOKENS_2 = {
     .data = (void *[]) {
         /* "hello" */    &(token_t){ .type = STRING,     .lexeme = "\"hello\"",  .line = 1 },
         /* != */        &(token_t){ .type = BANG_EQUAL, .lexeme = "!=",         .line = 1 },
@@ -57,16 +66,19 @@ static const list_t expected_tokens_2 = {
         /* ; */         &(token_t){ .type = SEMICOLON,  .lexeme = ";",          .line = 1 },
         /* EOF */       &(token_t){ .type = END_OF_FILE, .lexeme = "",          .line = 1 },
         NULL
-    }
+    },
+    .count = 14,
+    .capacity = 16,
+    .free_fn = NULL
 };
 
 //
 // Test case 3: variable declarations with floating-point literals
 //
-static const char * test_source_3 =
+static char const * g_test_source_3 =
     "var radius = 10.5; var area = 3.14 * radius * radius;";
 
-static const list_t expected_tokens_3 = {
+static list_t const EXPECTED_TOKENS_3 = {
     .data = (void *[]) {
         &(token_t){ .type = VAR,          .lexeme = "var",        .line = 1 },
         &(token_t){ .type = IDENTIFIER,   .lexeme = "radius",     .line = 1 },
@@ -84,16 +96,19 @@ static const list_t expected_tokens_3 = {
         &(token_t){ .type = SEMICOLON,    .lexeme = ";",          .line = 1 },
         &(token_t){ .type = END_OF_FILE,  .lexeme = "",           .line = 1 },
         NULL
-    }
+    },
+    .count = 15,
+    .capacity = 16,
+    .free_fn = NULL
 };
 
 //
 // Test case 4: for-loop with initialization, condition, increment, and block
 //
-static const char * test_source_4 =
+static char const * g_test_source_4 =
     "for (var i = 0; i < 10; i = i + 1) { print i; }";
 
-static const list_t expected_tokens_4 = {
+static list_t const EXPECTED_TOKENS_4 = {
     .data = (void *[]) {
         &(token_t){ .type = FOR,          .lexeme = "for",        .line = 1 },
         &(token_t){ .type = LEFT_PAREN,   .lexeme = "(",          .line = 1 },
@@ -119,14 +134,17 @@ static const list_t expected_tokens_4 = {
         &(token_t){ .type = RIGHT_BRACE,  .lexeme = "}",          .line = 1 },
         &(token_t){ .type = END_OF_FILE,  .lexeme = "",           .line = 1 },
         NULL
-    }
+    },
+    .count = 23,
+    .capacity = 32,
+    .free_fn = NULL
 };
 
 
-static bool token_equal(const token_t * e, const token_t * a) {
+static bool token_equal(token_t const * e, token_t const * a) {
     return e->type == a->type && e->line == a->line && strcmp(e->lexeme, a->lexeme) == 0;
 }
-static bool compare_tokens(const list_t * actual, const list_t * expected) {
+static bool compare_tokens(list_t const * actual, list_t const * expected) {
     /* count expected entries by NULL sentinel */
     size_t exp_count = 0;
     while (expected->data[exp_count] != NULL) {
@@ -154,24 +172,27 @@ static bool compare_tokens(const list_t * actual, const list_t * expected) {
 
     return true;
 }
-static inline int run_scanner_tests(scanner_t * p_scanner) {
-    const struct {
-        const char * source;
-        const list_t * expected; //<token_t*>
-        const char * name;
-    } tests[] = {
-        {test_source_1, &expected_tokens_1, "Test 1 (arithmetic)"},
-        {test_source_2, &expected_tokens_2, "Test 2 (strings & keywords)" },
-        { test_source_3, &expected_tokens_3, "Test 3 (floats & vars)" },
-        { test_source_4, &expected_tokens_4, "Test 4 (for-loop)" },
-        NULL
+
+int run_scanner_tests(scanner_t * p_scanner) {
+    printf("SCANNER TESTS:\n");
+    struct {
+        char const * source;
+        list_t const * expected; //<token_t*>
+        char const * name;
+    } const tests[] = {
+        {g_test_source_1, &EXPECTED_TOKENS_1, "Test 1 (arithmetic)"},
+        {g_test_source_2, &EXPECTED_TOKENS_2, "Test 2 (strings & keywords)" },
+        { g_test_source_3, &EXPECTED_TOKENS_3, "Test 3 (floats & vars)" },
+        { g_test_source_4, &EXPECTED_TOKENS_4, "Test 4 (for-loop)" },
+        {NULL, NULL, NULL }
     };
     bool all_passed = true;
     for (int ti = 0; tests[ti].source; ti++) {
         printf("%s:\n", tests[ti].name);
 
         p_scanner->start = tests[ti].source;
-        /* scan into actual list */
+
+        // Scanner manages list
         list_t actual = scan_tokens(p_scanner);
 
         /* compare against expected */
@@ -187,5 +208,3 @@ static inline int run_scanner_tests(scanner_t * p_scanner) {
     }
     return all_passed ? 0 : 1;
 }
-
-#endif //LOX_TEST_SCANNER_H

@@ -1,44 +1,37 @@
 //
-// Created by adrian on 2025-10-05.
+// Created by adrian on 2025-10-12.
 //
-/**
- * Generic hash-map implementation.
- *
- * Keys and values are stored as void pointers. For string keys, provide
- * appropriate hash and compare functions (e.g., hash_string, cmp_string),
- *
- * For pointer keys (e.g., structs, AST nodes), use pointer hash/compare
- *
- * To store integer values, cast them to and from void* using (void*)(intptr_t)val
- * and (int)(intptr_t)ptr.
- *
- * Example usage:
- *   map_t *m = map_create(16, hash_string, cmp_string, clean_string);
- *   map_put(m, "foo", (void*)true);
- *   ...
- *   map_t *m2 = map_create(8, hash_ptr, cmp_ptr, clean_ptr);
- *   map_put(m2, (void*)expr_node, (void*)(intptr_t)depth);
- */
 
 #ifndef LOX_MAP_H
 #define LOX_MAP_H
-
-#include <stddef.h>
 #include <stdbool.h>
-#include "Interfaces.h"
+#include <stddef.h>
+
+typedef size_t (*hash_fn_t)(const void * object);
+typedef bool (*cmp_fn_t)(const void * object1, const void * object2);
+typedef void * (*cpy_fn_t)(const void * object);
+
+typedef struct {
+    void (*reset)(void * self);
+    bool (*next)(void * self);
+    void * (*current)(const void * self);
+    void (*destroy)(void * self);
+} enumerable_vtable_t;
 
 typedef struct map map_t;
 typedef struct map_entry map_entry_t;
 typedef struct map_enumerator map_enumerator_t;
 
 typedef void (*map_clean_fn_t)(const void * key, const void * value);
+typedef void (*free_fn_t)(const void ** value);
 
 typedef struct {
     const hash_fn_t hash;
     const cmp_fn_t cmp;
     const cpy_fn_t kcopy;
     const cpy_fn_t vcopy;
-    const map_clean_fn_t clean;
+    const free_fn_t kfree;
+    const free_fn_t vfree;
 } map_config_t;
 
 map_t *map_create(size_t num_buckets, map_config_t config);
@@ -59,5 +52,7 @@ bool map_enumerator_next(map_enumerator_t * it);
 void * map_enumerator_current(map_enumerator_t * it);
 void map_enumerator_reset(map_enumerator_t * it);
 void map_enumerator_destroy(map_enumerator_t * it);
+
+void map_entry_free(void** ptr);
 
 #endif //LOX_MAP_H

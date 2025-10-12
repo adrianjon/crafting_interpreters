@@ -6,56 +6,46 @@
 #include <crtdbg.h>
 #include <stdint.h>
 
-#include "../tools/generate_ast_v2.h"
-
 #include "scanner.h"
 #include "parser.h"
 #include "interpreter.h"
 #include "resolver.h"
 #include "list.h"
 
-#include "test_scanner.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-void build_ast(void) {
-    char const * target_dir = "./lox2";
-    if (!generate_ast(target_dir, "expr", g_ast_expr_grammar) ||
-        !generate_ast(target_dir, "stmt", g_ast_stmt_grammar)) {
-        fprintf(stderr, "Failed to generate ast\n");
-        exit(EXIT_FAILURE);
-    }
-}
-char const * file_to_string(char const * path, char * buffer, size_t buffer_size);
-
-#define error false
+char * file_to_string(char const * path, char * buffer, size_t buffer_size);
 
 int main() {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
-    //build_ast();
-
     char source[4096] = {0};
-    char const * p_source = file_to_string("./lox2/source/main.lox", source, sizeof(source));
+    char * p_source =
+        file_to_string("./lox2/source/main.lox", source, sizeof(source));
 
     interpreter_t interpreter = {0};
 
     scanner_t scanner = { .start = p_source };
-    //run_scanner_tests(&scanner);
 
-    list_t tokens = scan_tokens(&scanner); // List<token_t>
+    list_t tokens = scan_tokens(&scanner); // List<token_t*>
     for (int i = 0; i < tokens.count; i++)
         printf("Token %d: %s\n", i, ((token_t*)tokens.data[i])->lexeme);
 
     parser_t parser = { .tokens = tokens };
-    list_t statements = parse(&parser); // List<stmt_t>
+    list_t statements = parse(&parser); // List<stmt_t*>
+
+    resolver_t resolver = {.interpreter = &interpreter, .scopes = NULL};
+    resolve(&resolver, &statements);
+
+    free_resolver(&resolver);
     list_free(&tokens);
+    list_free(&statements);
     return 0;
 }
 
-char const * file_to_string(char const * path,
+char * file_to_string(char const * path,
     char * buffer, size_t const buffer_size) {
     if (!path || !buffer || buffer_size == 0) return NULL;
     FILE * source_file = NULL;
