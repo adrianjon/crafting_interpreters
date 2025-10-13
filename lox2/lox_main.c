@@ -38,7 +38,9 @@ int main() {
 
     resolver_t resolver = {.interpreter = &interpreter, .scopes = NULL};
     resolve(&resolver, &statements);
+    interpret(&interpreter, &statements);
 
+    //free_interpreter(&interpreter);
     free_resolver(&resolver);
     list_free(&tokens);
     list_free(&statements);

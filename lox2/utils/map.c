@@ -30,8 +30,8 @@ struct map_enumerator {
 };
 
 static void free_map_entry(map_entry_t * p_entry, free_fn_t kfree, free_fn_t vfree);
-static void free_wrapper(void const ** ptr);
 
+static void free_wrapper(void const ** ptr);
 static size_t hash_string(const void * key) {
     const unsigned char * str = key;
     size_t hash = 5381;
@@ -40,11 +40,9 @@ static size_t hash_string(const void * key) {
         hash = (hash << 5) + hash + c; // hash * 33 + c
     return hash;
 }
-
 static bool cmp_string(const void * key1, const void * key2) {
     return strcmp(key1, key2) == 0;
 }
-
 static void * copy_string(const void * key) {
     if (!key) return NULL;
     char * str = malloc(strlen(key) + 1);
@@ -60,8 +58,9 @@ map_config_t map_default_config(void) {
                             .kfree = free_wrapper, .vfree = free_wrapper
     };
 }
-
+//123456789012345678901234567890
 static void free_wrapper(void const ** ptr) {
+
     free((void*)*ptr);
     *ptr = NULL;
 }
@@ -106,11 +105,13 @@ void map_destroy(map_t * map) {
 }
 
 bool map_put(map_t * map, const void * key, void * value) {
+    if (!map) return false;
     const size_t index = map->hash(key) % map->num_buckets;
     struct map_entry * entry = map->buckets[index];
     while (entry) {
         if (map->cmp(entry->key, key)) {
-            entry->value = value;
+            map->vfree((void const **)&entry->value); // free old value
+            entry->value = map->vcopy(value);
             return true;
         }
         entry = entry->next;

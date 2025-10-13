@@ -84,8 +84,8 @@ static bool expr_equal(expr_t const * a, expr_t const * b) {
                           b->as.variable_expr.name->lexeme) == 0;
         case EXPR_ASSIGN:
             if (a->as.assign_expr.target->type != b->as.assign_expr.target->type) return false;
-            if (strcmp(a->as.assign_expr.target->lexeme,
-                       b->as.assign_expr.target->lexeme) != 0) return false;
+            if (strcmp(a->as.assign_expr.target->as.variable_expr.name->lexeme,
+                       b->as.assign_expr.target->as.variable_expr.name->lexeme) != 0) return false;
             return expr_equal(a->as.assign_expr.value, b->as.assign_expr.value);
         default:
             fprintf(stderr, "Unhandled expression type (%d)\n", a->type);

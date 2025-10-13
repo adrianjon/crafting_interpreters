@@ -184,8 +184,11 @@ static void resolve_expression(resolver_t * p_resolver, expr_t * p_expr) {
     switch (p_expr->type) {
         case EXPR_ASSIGN:
             resolve_expression(p_resolver, p_expr->as.assign_expr.value);
-            char const * name = p_expr->as.assign_expr.target->lexeme;
-            resolve_local(p_resolver, p_expr, name);
+            if (p_expr->as.assign_expr.target->type == EXPR_VARIABLE) {
+                char const * name = p_expr->as.assign_expr.target->as.variable_expr.name->lexeme;
+                // if resolve local returns -1, assignment is in global scope
+                resolve_local(p_resolver, p_expr, name);
+            }
             break;
         case EXPR_BINARY:
             resolve_expression(p_resolver, p_expr->as.binary_expr.left);

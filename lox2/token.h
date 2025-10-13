@@ -103,7 +103,7 @@ typedef struct {
     size_t          line;
 } token_t;
 
-inline token_t * new_token(token_type_t const type, char const * lexeme, size_t const line) {
+static inline token_t * new_token(token_type_t const type, char const * lexeme, size_t const line) {
     token_t * token = malloc(sizeof(token_t));
     token->type = type;
     rsize_t const  lexeme_len = strlen(lexeme);
@@ -112,10 +112,11 @@ inline token_t * new_token(token_type_t const type, char const * lexeme, size_t 
     token->line = line;
     return token;
 }
-inline token_t * copy_token(token_t const * token) {
+static inline token_t * copy_token(token_t const * token) {
     return new_token(token->type, token->lexeme, token->line);
 }
-inline void token_free(void ** pp_token) {
+// TODO put stuff into .c file
+static inline void token_free(void ** pp_token) {
     token_t * p_token = *(token_t **)pp_token;
     free(p_token->lexeme);
     p_token->lexeme = NULL;

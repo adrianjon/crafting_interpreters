@@ -3,6 +3,8 @@
 //
 
 #include "stack.h"
+
+#include <stdio.h>
 #include <stdlib.h>
 
 #define STACK_GROWTH_FACTOR 2
@@ -22,6 +24,8 @@ stack_t *stack_create(size_t initial_capacity) {
 
 void stack_destroy(stack_t *stack) {
     if (stack) {
+        fprintf(stderr, "Stack should not exist here");
+        exit(EXIT_FAILURE);
         free(stack->data);
         free(stack);
     }

@@ -87,10 +87,10 @@ static expr_t * assignment(parser_t * p_parser) {
 
         expr_t * assign = malloc(sizeof(expr_t));
         if (p_expr->type == EXPR_VARIABLE) {
-            token_t * name = copy_token(p_expr->as.variable_expr.name);
-            free_expr((void**)&p_expr); // discard expr, only using copy of its name
+            //token_t * name = copy_token(p_expr->as.variable_expr.name);
+            //free_expr((void**)&p_expr); // discard expr, only using copy of its name
             assign->type = EXPR_ASSIGN;
-            assign->as.assign_expr.target = name;
+            assign->as.assign_expr.target = p_expr;
             assign->as.assign_expr.value = value;
             return assign;
         }
@@ -305,9 +305,19 @@ static stmt_t * function_declaration(parser_t * p_parser)  {
     exit(EXIT_FAILURE);
 }
 static stmt_t * variable_declaration(parser_t * p_parser)  {
-    p_parser->had_error = true;
-    fprintf(stderr, "Not implemented\n");
-    exit(EXIT_FAILURE);
+    consume(p_parser, VAR, "Expected 'var' before identifier.");
+    token_t const name = consume(p_parser, IDENTIFIER, "Expected variable name.");
+    expr_t * p_initializer = NULL;
+    if (token_match(p_parser, 1, EQUAL))
+        p_initializer = parse_expression(p_parser);
+
+    consume(p_parser, SEMICOLON, "Expected ';' after variable declaration.");
+    stmt_t * var_decl = malloc(sizeof(stmt_t));
+    if (!var_decl) exit(EXIT_FAILURE);
+    var_decl->type = STMT_VAR;
+    var_decl->as.var_stmt.name = copy_token(&name);
+    var_decl->as.var_stmt.initializer = p_initializer;
+    return var_decl;
 }
 
 // statement            -> expression_statement
@@ -511,7 +521,7 @@ static token_t consume(parser_t * p_parser, token_type_t const type, char const 
     if (p_parser->p_current->type == type) {
         p_parser->p_previous = p_parser->p_current;
         p_parser->p_current = p_parser->tokens.data[++p_parser->current_index];
-        return *p_parser->p_current;
+        return *p_parser->p_previous;
     }
     fprintf(stderr, "ParserError: %s\n", p_msg);
     exit(EXIT_FAILURE);
@@ -583,7 +593,7 @@ static void free_expr(void ** pp_expr) {
      switch (p_expr->type) {
          case EXPR_ASSIGN:
              free_expr((void**)&p_expr->as.assign_expr.value);
-             token_free((void**)&p_expr->as.assign_expr.target);
+             free_expr((void**)&p_expr->as.assign_expr.target);
              break;
          case EXPR_BINARY:
              free_expr((void**)&p_expr->as.binary_expr.left);
