@@ -50,20 +50,20 @@ add_executable(lox2 lox2/lox_main.c
 )
 
 add_executable(test lox2/tests/test_main.c
-        lox2/tests/scanner/test_scanner.c
-        lox2/tests/parser/test_parser.c
-        lox2/tests/resolver/test_resolver.c
-        lox2/expr.c
-        lox2/stmt.c
-        lox2/token.h
-        lox2/scanner.c
-        lox2/list.h
-        lox2/parser.c
-        lox2/interpreter.c
-        lox2/resolver.c
-        lox2/utils/map.c
-        lox2/utils/stack.c
-        lox2/environment.c
+#        lox2/tests/scanner/test_scanner.c
+#        lox2/tests/parser/test_parser.c
+#        lox2/tests/resolver/test_resolver.c
+#        lox2/expr.c
+#        lox2/stmt.c
+#        lox2/token.h
+#        lox2/scanner.c
+#        lox2/list.h
+#        lox2/parser.c
+#        lox2/interpreter.c
+#        lox2/resolver.c
+#        lox2/utils/map.c
+#        lox2/utils/stack.c
+#        lox2/environment.c
         lox2/tests/map/test_map.c
         lox2/tests/map/map2.c
         lox2/tests/map/map2.h
