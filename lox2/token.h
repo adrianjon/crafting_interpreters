@@ -106,9 +106,9 @@ typedef struct {
 static inline token_t * new_token(token_type_t const type, char const * lexeme, size_t const line) {
     token_t * token = malloc(sizeof(token_t));
     token->type = type;
-    rsize_t const  lexeme_len = strlen(lexeme);
+    size_t const  lexeme_len = strlen(lexeme);
     token->lexeme = malloc(lexeme_len + 1);
-    strcpy_s(token->lexeme, lexeme_len + 1, lexeme);
+    strncpy(token->lexeme, lexeme, lexeme_len + 1);
     token->line = line;
     return token;
 }

@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 4.0)
+#cmake_minimum_required(VERSION 4.0)
+cmake_minimum_required(VERSION 3.31)
 project(lox C)
 
 set(CMAKE_C_STANDARD 23)
@@ -34,6 +35,7 @@ add_executable(lox main.c
 add_executable(ast_generator tools/generate_ast_v2.c)
 
 add_executable(lox2 lox2/lox_main.c
+        lox2/tests/map/map2.c
         lox2/expr.c
         lox2/stmt.c
         lox2/token.h
@@ -42,7 +44,6 @@ add_executable(lox2 lox2/lox_main.c
         lox2/parser.c
         lox2/interpreter.c
         lox2/resolver.c
-        lox2/utils/map.c
         lox2/utils/stack.c
         lox2/environment.c
         lox2/value.h

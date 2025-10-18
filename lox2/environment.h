@@ -6,8 +6,9 @@
 #define LOX_ENVIRONMENT_H
 
 #include <stdbool.h>
-#include "utils/map.h"
 #include "value.h"
+#include "../tests/map/map2.h"
+
 
 /* value_t is your runtime value representation. Keep it opaque here. */
 //typedef struct value value_t;

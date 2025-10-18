@@ -7,8 +7,10 @@
 #include "stmt.h"
 #include "expr.h"
 
-#include "utils/map.h"
 #include "utils/stack.h"
+
+#undef NULL
+#define NULL nullptr
 
 static void resolve_statement(resolver_t * p_resolver, stmt_t const * p_stmt);
 static void resolve_expression(resolver_t * p_resolver, expr_t * p_expr);
@@ -134,7 +136,7 @@ static void resolve_statement(resolver_t * p_resolver, stmt_t const * p_stmt) {
 
             end_scope(p_resolver);
 
-            if (s->superclass > 0) end_scope(p_resolver);
+            if (s->superclass_count > 0) end_scope(p_resolver);
 
             p_resolver->current_class = class_enclosing;
             break;
@@ -187,7 +189,8 @@ static void resolve_expression(resolver_t * p_resolver, expr_t * p_expr) {
             if (p_expr->as.assign_expr.target->type == EXPR_VARIABLE) {
                 char const * name = p_expr->as.assign_expr.target->as.variable_expr.name->lexeme;
                 // if resolve local returns -1, assignment is in global scope
-                resolve_local(p_resolver, p_expr, name);
+                p_expr->as.assign_expr.target->as.variable_expr.depth =
+                    resolve_local(p_resolver, p_expr, name);
             }
             break;
         case EXPR_BINARY:
@@ -238,9 +241,14 @@ static void resolve_expression(resolver_t * p_resolver, expr_t * p_expr) {
             break;
         case EXPR_VARIABLE:
             if (!stack_is_empty(p_resolver->scopes)) {
-                map_t const * scope = stack_peek(p_resolver->scopes);
+                map_t * scope = stack_peek(p_resolver->scopes);
                 if (map_contains(scope, p_expr->as.variable_expr.name->lexeme)) {
-                    bool const * defined = map_get(scope, p_expr->as.variable_expr.name->lexeme);
+                    bool * ret;
+                    if (!map_get(scope, p_expr->as.variable_expr.name->lexeme, (void**)&ret)) {
+                        fprintf(stderr, "failed to get from map\n");
+                        exit(EXIT_FAILURE);
+                    }
+                    bool const * defined = ret;
                     if (defined && *defined == false) {
                         fprintf(
                             stderr,
@@ -250,7 +258,8 @@ static void resolve_expression(resolver_t * p_resolver, expr_t * p_expr) {
                     }
                 }
             }
-            resolve_local(p_resolver, p_expr, p_expr->as.variable_expr.name->lexeme);
+            p_expr->as.variable_expr.depth =
+                resolve_local(p_resolver, p_expr, p_expr->as.variable_expr.name->lexeme);
             break;
         default:
             fprintf(stderr, "Not implemented (%d)\n", p_expr->type);
@@ -258,10 +267,46 @@ static void resolve_expression(resolver_t * p_resolver, expr_t * p_expr) {
 
     }
 }
-
+static void * bool_copy(void const * ptr) {
+    bool * ret = malloc(sizeof(bool));
+    if (!ret) exit(EXIT_FAILURE);
+    *ret = *(bool*)ptr;
+    return ret;
+}
+static void * str_copy(void const * ptr) {
+    size_t const len = strlen(ptr);
+    char * copy = malloc(len + 1);
+    memcpy(copy, ptr, len);
+    copy[len] = '\0';
+    return copy;
+}
+static bool str_equal(void const * a, void const * b) {
+    if (!a || !b) return false;
+    return strcmp(a, b) == 0;
+}
+static size_t str_hash(void const * key) {
+    if (!key) return 0;
+    unsigned char const * s = key;
+    size_t hash = 5381;
+    int c;
+    while ((c = *s++))
+        hash = ((hash << 5) + hash) + c;
+    return hash;
+}
 // Map of type <char*, bool*>
 static void begin_scope(resolver_t const * p_resolver) {
-    if (!stack_push(p_resolver->scopes, map_create(1, (map_config_t){0})))
+    map_config_t const charptr_bool_cfg = {
+        .value_copy = bool_copy,
+        .value_free = free,
+        .key_copy = str_copy,
+        .key_free = free,
+        .key_equals = str_equal,
+        .key_hash = str_hash,
+        .key_size = sizeof(char*),
+        .value_size = sizeof(bool),
+    };
+    if (!stack_push(p_resolver->scopes,
+        map_create(1, &charptr_bool_cfg)))
         exit(EXIT_FAILURE);
 }
 
@@ -287,16 +332,25 @@ static void declare(resolver_t const * p_resolver, char const * p_name) {
         fprintf(stderr, "Resolver error: variable already declared in this scope");
         exit(EXIT_FAILURE);
     }
-    map_put(scope, p_name, new_bool(false));
+    bool constexpr defined = false;
+    map_put(scope, p_name, &defined);
 
 }
 static void define(resolver_t const * p_resolver, char const * p_name) {
     if (stack_is_empty(p_resolver->scopes)) return;
     map_t * scope = stack_peek(p_resolver->scopes);
     if (!map_contains(scope, p_name)) return;
-    bool * p_old = map_get(scope, p_name);
-    if (p_old) free(p_old);
-    map_put(scope, p_name, new_bool(true));
+
+    // bool * ret;
+    // if (!map_get(scope, p_name, (void**)&ret)) {
+    //     fprintf(stderr, "failed to get from map\n");
+    //     exit(EXIT_FAILURE);
+    // }
+
+    ////bool * p_old = ret;
+    //if (p_old) free(p_old);
+    bool constexpr defined = true;
+    map_put(scope, p_name, &defined);
 }
 
 static int resolve_local(resolver_t const * p_resolver, expr_t * p_expr, char const * p_name) {
@@ -304,7 +358,9 @@ static int resolve_local(resolver_t const * p_resolver, expr_t * p_expr, char co
         const map_t * scope = (map_t*)p_resolver->scopes->data[i];
         if (map_contains(scope, p_name)) {
             const int distance = (int)stack_size(p_resolver->scopes) - 1 - i;
-            interpreter_resolve(p_resolver->interpreter, p_expr, distance);
+            if (p_expr->type == EXPR_VARIABLE)
+                p_expr->as.variable_expr.depth = distance;
+            //interpreter_resolve(p_resolver->interpreter, p_expr, distance);
             return distance;
         }
     }

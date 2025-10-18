@@ -4,9 +4,11 @@
 
 #include "map2.h"
 
+#include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 static void * default_copy(void const * src);
 static void default_free(void * ptr);
@@ -73,7 +75,24 @@ void map_destroy(hashmap_t * map) {
     free(map);
 }
 
+static void resize_map(hashmap_t * map, size_t const num_buckets) {
 
+    map_entry_t ** new_buckets = calloc(num_buckets, sizeof(map_entry_t*));
+    if (!new_buckets) { map_destroy(map); exit(-1); }
+
+    for (size_t i = 0; i < map->num_buckets; i++) {
+        map_entry_t * entry = map->buckets[i];
+        while (entry) {
+            map_entry_t * next = entry->next;
+            size_t const new_index = map->key_hash(entry->key) % num_buckets;
+            new_buckets[new_index] = entry;
+            entry = next;
+        }
+    }
+    free(map->buckets);
+    map->buckets = new_buckets;
+    map->num_buckets = num_buckets;
+}
 /**
  *
  * @param map pointer to an existing hashmap
@@ -83,6 +102,7 @@ void map_destroy(hashmap_t * map) {
  */
 bool map_put(hashmap_t * map, void const * key, void const * value) {
     if (!map || !map->buckets || !key) return false;
+    if ((map->size + 1) * 4 > map->num_buckets * 3) resize_map(map, map->num_buckets * 2);
     size_t const index = map->key_hash(key) % map->num_buckets;
     map_entry_t * entry = map->buckets[index];
     while (entry) {
@@ -104,13 +124,34 @@ bool map_put(hashmap_t * map, void const * key, void const * value) {
     return true;
 }
 
+/**
+ * map_get - retrieves a value from the map
+ *
+ * @map: pointer to the map
+ * @key: pointer to the key
+ * @out_val: pointer to a uintptr_t variable where the value will be stored
+ *
+ * Returns: true if the key exists, false otherwise.
+ *
+ * NOTE:
+ *   - This map stores scalar values (bool, int, enums, etc.) by value using (void*)(intptr_t)value.
+ *   - Therefore, `out_val` **must point to a uintptr_t or void* variable**, not a smaller type.
+ *   - Do NOT pass a pointer to a type smaller than the platform pointer size (e.g., bool or int on 64-bit),
+ *     as this will cause memory corruption.
+ *
+ * Example usage:
+ *   uintptr_t tmp;
+ *   if (map_get(map, key, &tmp)) {
+ *       bool b = (bool)tmp;
+ *   }
+ */
 bool map_get(hashmap_t * map, void const * key, void ** out_value) {
     if (!map || !map->buckets || !key) return false;
     size_t const index = map->key_hash(key) % map->num_buckets;
     map_entry_t const * entry = map->buckets[index];
     while (entry) {
         if (map->key_equals(key, entry->key)) {
-            *out_value = entry->value;
+            *out_value = (uintptr_t*)entry->value;
             return true;
         }
         entry = entry->next;
@@ -123,9 +164,17 @@ bool map_remove(hashmap_t * map,  void const * key) {
     exit(EXIT_FAILURE);
 }
 
-bool map_contains(hashmap_t * map, void const * key) {
-    fprintf(stderr, "map_contains is not implemented");
-    exit(EXIT_FAILURE);
+bool map_contains(hashmap_t const * map, void const * key) {
+    if (!map || !map->buckets || !key) return false;
+    size_t const index = map->key_hash(key) % map->num_buckets;
+    map_entry_t const * entry = map->buckets[index];
+    while (entry) {
+        if (map->key_equals(key, entry->key)) {
+            return true;
+        }
+        entry = entry->next;
+    }
+    return false;
 }
 
 size_t map_size(hashmap_t * map) {
@@ -153,6 +202,6 @@ static void free_map_entry(map_entry_t * entry,
         free_fn_t const kfree, free_fn_t const vfree) {
     if (!entry || !kfree || !vfree) return;
     kfree(entry->key);
-    kfree(entry->value);
+    vfree(entry->value);
     free(entry);
 }

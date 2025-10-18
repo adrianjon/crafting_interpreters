@@ -100,6 +100,7 @@ typedef struct {
 
 typedef struct {
 	 token_t * name;
+	 int depth;
 } expr_variable_t;
 
 struct expr {

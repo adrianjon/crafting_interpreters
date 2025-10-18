@@ -6,10 +6,13 @@
 #define LOX_MAP2_H
 
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 #ifndef __STDC_NO_THREADS__
 //#include <threads.h>
 #endif
+
+
 
 // Function pointer types
 typedef size_t (*hash_fn_t)(void const * key);
@@ -22,6 +25,7 @@ typedef struct map_entry map_entry_t;
 
 // Main hashmap structure
 typedef struct hashmap hashmap_t;
+typedef hashmap_t map_t;
 struct hashmap {
     map_entry_t ** buckets;
     size_t num_buckets;
@@ -77,7 +81,7 @@ bool map_get(hashmap_t * map, void const * key, void ** out_value);
 bool map_remove(hashmap_t * map,  void const * key);
 
 // Check if a key exists
-bool map_contains(hashmap_t * map, void const * key);
+bool map_contains(hashmap_t const * map, void const * key);
 
 // Get the number of elements in the map
 size_t map_size(hashmap_t * map);

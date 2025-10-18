@@ -3,8 +3,11 @@
 //
 
 #include "environment.h"
-
+#include "../tests/map/map2.h"
 #include <stdlib.h>
+
+#undef NULL
+#define NULL nullptr
 
 /* Map semantics assumed:
  * - map_create(num_buckets, config) returns a map_t*
@@ -18,15 +21,47 @@
  * didn't strdup, adapt config to not free keys.
  */
 static void * copy_value(void const * val) {
-    return (value_t*)val;
+    value_t * copy = malloc(sizeof(value_t));
+    memcpy(copy, val, sizeof(value_t));
+    return copy;
 }
-static void free_value(void const ** val) {
-    (void)val;
+static void free_value(void * val) {
+    free(val);
+}
+static void * str_copy(void const * ptr) {
+    size_t const len = strlen(ptr);
+    char * copy = malloc(len + 1);
+    memcpy(copy, ptr, len);
+    copy[len] = '\0';
+    return copy;
+}
+static bool str_equal(void const * a, void const * b) {
+    if (!a || !b) return false;
+    return strcmp(a, b) == 0;
+}
+static size_t str_hash(void const * key) {
+    if (!key) return 0;
+    unsigned char const * s = key;
+    size_t hash = 5381;
+    int c;
+    while ((c = *s++))
+        hash = ((hash << 5) + hash) + c;
+    return hash;
 }
 environment_t * environment_create(environment_t * enclosing) {
-    map_config_t const cfg = { .vcopy = copy_value, .vfree = free_value };
+    //<char*,value_t*> map
+    map_config_t const cfg = {
+        .key_copy = str_copy,
+        .key_equals = str_equal,
+        .key_hash = str_hash,
+        .key_free = free,
+        .key_size = sizeof(char*),
+        .value_size = sizeof(value_t),
+        .value_copy = copy_value,
+        .value_free = free_value
+    };
     /* choose initial bucket count conservatively */
-    map_t * m = map_create(16, cfg);
+    map_t * m = map_create(16, &cfg);
     if (!m) return NULL;
     environment_t * env = malloc(sizeof(environment_t));
     if (!env) {
@@ -54,7 +89,9 @@ value_t * environment_get(environment_t const * env, char const * name) {
     environment_t const * curr = env;
     while (curr) {
         if (map_contains(curr->values, name)) {
-            return map_get(curr->values, name);
+            value_t * ret;
+            map_get(curr->values, name, (void**)&ret);
+            return ret;
         }
         curr = curr->enclosing;
     }
@@ -69,7 +106,9 @@ value_t * environment_get_at(environment_t * env, int const distance, char const
     }
     if (!curr) return NULL;
     if (map_contains(curr->values, name)) {
-        return map_get(curr->values, name);
+        value_t * ret;
+        map_get(curr->values, name, (void**)&ret);
+        return ret;
     }
     return NULL;
 }

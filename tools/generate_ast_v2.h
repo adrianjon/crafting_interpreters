@@ -19,7 +19,7 @@ static char const * g_ast_expr_grammar[] = {
     "super    : token_t * keyword, token_t * method",
     "this     : token_t * keyword",
     "unary    : token_t * operator, expr_t * right",
-    "variable : token_t * name",
+    "variable : token_t * name, int depth",
     NULL
 };
 

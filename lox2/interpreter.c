@@ -5,11 +5,10 @@
 #include "interpreter.h"
 #include <stdio.h>
 #include <string.h>
-
+#include "../tests/map/map2.h"
 #include "environment.h"
 #include "value.h"
 #include "object.h"
-#include "utils/map.h"
 #include "stmt.h"
 #include "expr.h"
 
@@ -18,41 +17,42 @@ static value_t evaluate(interpreter_t * i, expr_t const * e);
 static value_t * lookup(interpreter_t const * p_i, token_t const * p_t, expr_t const * p_e);
 
 // int embedded in void * for map usage
-static void * copy_int(void const * value) {
-    return (void*)value;
-}
-static void free_int(void const ** value) {
-    (void)value;
-}
+// static void * copy_int(void const * value) {
+//     int * copy = malloc(sizeof(int));
+//     if (!copy) exit(1);
+//     *copy = *(int *)value;
+//     return copy;
+// }
+// static void free_int(void * value) {
+//     free(value);
+// }
 // expr_t* functions for map usage, no deep copy, no ownership
 // can use copy_int and free_int
-static size_t hash_expr(void const * value) {
-    return (size_t)value;
-}
-static bool cmp_expr(void const * key_a, void const * key_b) {
-    return key_a == key_b;
-}
+// static size_t hash_expr(void const * value) {
+//     return (size_t)value;
+// }
+// static bool cmp_expr(void const * key_a, void const * key_b) {
+//     if (!key_a || !key_b) return false;
+//     return(memcmp(key_a, key_b, sizeof(expr_t)) == 0);
+// }
+// static void expr_free(void * p_expr) {
+//     free(p_expr);
+// }
+// static void * copy_expr(void const * ptr) {
+//     expr_t * copy = malloc(sizeof(expr_t));
+//     memcpy(copy, ptr, sizeof(expr_t));
+//     return copy;
+// }
 
 void interpret(interpreter_t * p_interpreter, list_t * p_statements) {
     if (!p_interpreter || !p_statements) return;
-    // TODO check if init is needed
+    if (!p_interpreter->globals) {
+        p_interpreter->globals = environment_create(NULL);
+    }
     for (size_t i = 0; i < p_statements->count; i++) {
         execute(p_interpreter, p_statements->data[i]);
         // TODO error handling
     }
-}
-void interpreter_resolve(interpreter_t * p_interpreter, expr_t * p_expr, int const depth) {
-    if (!p_interpreter || !p_expr) return;
-    // if locals is not initialized
-    if (!p_interpreter->locals) {
-        map_config_t const cfg = {
-            hash_expr, cmp_expr, copy_int,
-            copy_int, free_int, free_int
-        };
-        p_interpreter->locals = map_create(1, cfg);
-    }
-    if (p_expr->type == EXPR_ASSIGN)
-        map_put(p_interpreter->locals, p_expr->as.assign_expr.target, (void*)(intptr_t)depth);
 }
 
 static void execute(interpreter_t * p_i, stmt_t const * p_s) {
@@ -77,19 +77,35 @@ static void execute(interpreter_t * p_i, stmt_t const * p_s) {
             break;
         }
         case STMT_IF:
-        case STMT_PRINT:
-        case STMT_RETURN:
+        case STMT_PRINT: {
+            stmt_print_t const stmt = p_s->as.print_stmt;
+            value_t const val = evaluate(p_i, stmt.expression);
+            switch (val.type) {
+                case VAL_NUMBER:
+                    printf("%f\n", val.as.number);
+                    break;
+                case VAL_BOOL:
+                    printf("%s\n", val.as.boolean ? "true" : "false");
+                    break;
+                case VAL_NIL:
+                    printf("nil\n");
+                    break;
+                case VAL_OBJ:
+                    break;
+            }
+            break;
+        }
+        case STMT_RETURN: break;
         case STMT_VAR: {
             stmt_var_t const stmt = p_s->as.var_stmt;
             value_t val = value_nil();
             if (stmt.initializer) val = evaluate(p_i, stmt.initializer);
             // TODO handle runtime error
-            value_t ** boxed = malloc(sizeof(value_t*));
-            if (!boxed) exit(EXIT_FAILURE);
-            *boxed = malloc(sizeof(value_t));
-            if (!*boxed) exit(EXIT_FAILURE);
-            **boxed = val;
-            environment_define(p_i->environment, stmt.name->lexeme, *boxed);
+            if (p_i->environment) {
+                environment_define(p_i->environment, stmt.name->lexeme, &val);
+            }
+            // globals
+            environment_define(p_i->globals, stmt.name->lexeme, &val);
             break;
         }
         case STMT_WHILE:
@@ -105,20 +121,14 @@ static value_t evaluate(interpreter_t * p_i, expr_t const * p_e) {
             expr_assign_t const expr = p_e->as.assign_expr;
             if (expr.value) val = evaluate(p_i, expr.value);
             // TODO handle runtime error
-            value_t ** boxed = malloc(sizeof(value_t*));
-            if (!boxed) exit(EXIT_FAILURE);
-            *boxed = malloc(sizeof(value_t));
-            if (!*boxed) exit(EXIT_FAILURE);
-            **boxed = val;
-            if (p_i->locals && map_contains(p_i->locals, expr.target)) {
-                int const distance = (int)(intptr_t)map_get(p_i->locals, expr.target);
-                if (distance >= 0) {
-                    environment_assign_at(p_i->environment,
-                        distance, expr.target->as.variable_expr.name->lexeme, *boxed);
-                }
+            if (expr.target->type == EXPR_VARIABLE &&
+                expr.target->as.variable_expr.depth >= 0) {
+                environment_assign_at(p_i->environment,
+                         expr.target->as.variable_expr.depth,
+                         expr.target->as.variable_expr.name->lexeme, &val);
             } else {
                 environment_assign(p_i->globals,
-                    expr.target->as.variable_expr.name->lexeme, *boxed);
+                    expr.target->as.variable_expr.name->lexeme, &val);
             }
             break;
         }
@@ -190,8 +200,11 @@ static value_t evaluate(interpreter_t * p_i, expr_t const * p_e) {
     return val;
 }
 static value_t * lookup(interpreter_t const * p_i, token_t const * p_t, expr_t const * p_e) {
-    int const distance = (int)(intptr_t)map_get(p_i->locals, p_e);
-    if (map_contains(p_i->locals, p_e) && distance >= 0) {
+    int distance = -1;
+    if (p_e->type == EXPR_VARIABLE) {
+        distance = p_e->as.variable_expr.depth;
+    }
+    if (distance >= 0) {
         return environment_get_at(p_i->environment, distance, p_t->lexeme);
     }
     return environment_get(p_i->globals, p_t->lexeme);

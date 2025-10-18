@@ -19,6 +19,8 @@ typedef enum {
     VAL_OBJ
 } value_type_t;
 
+
+// must be zero-initialized when allocated
 typedef struct value {
     value_type_t type;
     union {

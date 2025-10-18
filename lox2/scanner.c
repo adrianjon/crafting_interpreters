@@ -25,7 +25,7 @@ list_t scan_tokens(scanner_t * p_scanner) {
         p_scanner->p_previous = p_scanner->p_current;
     }
 
-    list_add(&tokens, new_token(END_OF_FILE, "", p_scanner->line));
+    list_add(&tokens, new_token(END_OF_FILE, "EOF", p_scanner->line));
     return tokens;
 }
 

@@ -2,8 +2,10 @@
 // Created by adrian on 2025-10-11.
 //
 
+#ifdef WIN32
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
+#endif
 #include <stdint.h>
 
 #include "scanner.h"
@@ -16,11 +18,31 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 202000L)
+#undef NULL
+#define NULL nullptr
+#endif
+
+#ifndef WIN32
+// ReSharper disable once CppInconsistentNaming
+#define fread_s(buffer, bufferSize, elementSize, count, stream) \
+fread(buffer, elementSize, count, stream)
+// ReSharper disable once CppInconsistentNaming
+#define fopen_s(pFile, filename, mode) \
+    0; *pFile = fopen(filename, mode)
+// ReSharper disable once CppInconsistentNaming
+#define strerror_s(buffer, sizeInBytes, errnum) \
+    strerror(errnum)
+
+// ReSharper disable once CppInconsistentNaming
+#define errno_t int
+#endif
 char * file_to_string(char const * path, char * buffer, size_t buffer_size);
 
 int main() {
+#ifdef WIN32
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-
+#endif
     char source[4096] = {0};
     char * p_source =
         file_to_string("./lox2/source/main.lox", source, sizeof(source));
@@ -41,7 +63,7 @@ int main() {
     interpret(&interpreter, &statements);
 
     //free_interpreter(&interpreter);
-    free_resolver(&resolver);
+    //free_resolver(&resolver);
     list_free(&tokens);
     list_free(&statements);
     return 0;
