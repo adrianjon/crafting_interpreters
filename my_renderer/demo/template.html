@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Full Screen WebGPU Canvas</title>
+<style>
+  body, html {
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* no scrollbars */
+    width: 100%;
+    height: 100%;
+  }
+  canvas {
+    /*display: block;*/ /* removes padding/margin issues */
+    width: calc(100vw - 40px);
+    height: calc(100vh - 40px);
+    margin: 20px;
+    border: 5px solid #ff0000ff;
+    border-radius: 15px;
+  }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<script>
+  // Function to set canvas size and notify C code
+  function updateCanvasSize() {
+    const canvas = document.getElementById('canvas');
+    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+    const rect = canvas.getBoundingClientRect();
+    const width = Math.floor(rect.width);
+    const height = Math.floor(rect.height);
+    
+    // Set canvas internal resolution to match display size
+    canvas.width = width;
+    canvas.height = height;
+    
+    // Call C function if Module is ready
+    if (typeof Module !== 'undefined' && Module.ccall) {
+      Module.ccall('set_canvas_size', null, ['number', 'number'], [width, height]);
+    }
+  }
+  
+  // Set up Module callbacks
+  var Module = {
+    onRuntimeInitialized: function() {
+      console.log('WebGPU Module initialized');
+      updateCanvasSize(); // Set initial size
+      
+      // Set up resize handlers only after module is ready
+      window.addEventListener('resize', function() {
+        setTimeout(updateCanvasSize, 10); // Small delay to ensure layout is complete
+      });
+      
+    }
+  };
+</script>
+
+{{{ SCRIPT }}}
+</body>
+</html>

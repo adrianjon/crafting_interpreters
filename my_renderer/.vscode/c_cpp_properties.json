@@ -1,0 +1,26 @@
+{
+    "configurations": [
+        {
+            "name": "Emscripten C",
+            "includePath": [
+                "${workspaceFolder}/code/include",
+                "C:/Users/adrian/emscripten/emsdk/upstream/emscripten/cache/sysroot/include",
+                "C:/Users/adrian/emscripten/emsdk/upstream/emscripten/cache/sysroot/include/emscripten",
+                "C:/Users/adrian/emscripten/emsdk/upstream/emscripten/cache/ports/emdawnwebgpu/emdawnwebgpu_pkg/webgpu/include",
+                "C:/Users/adrian/emscripten/emsdk/upstream/emscripten/cache/ports/emdawnwebgpu/emdawnwebgpu_pkg/webgpu_cpp/include"
+            ],
+            "defines": [
+                "__EMSCRIPTEN__",
+                "EMSCRIPTEN",
+                "__wasm__",
+                "__wasm32__"
+            ],
+            "compilerPath": "C:/Users/adrian/emscripten/emsdk/upstream/emscripten/emcc.bat",
+            "cStandard": "c11",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "gcc-x64",
+            "configurationProvider": "ms-vscode.cmake-tools"
+        }
+    ],
+    "version": 4
+}

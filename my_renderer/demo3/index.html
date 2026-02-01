@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Full Screen WebGPU Canvas</title>
+<style>
+  body, html {
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* no scrollbars */
+    width: 100%;
+    height: 100%;
+  }
+  canvas {
+    /*display: block;*/ /* removes padding/margin issues */
+    width: calc(100vw - 40px);
+    height: calc(100vh - 40px);
+    margin: 20px;
+    border: 5px solid #ff0000ff;
+    border-radius: 15px;
+  }
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<!-- NEW SIDEBAR -->
+<div id="sidebar" class="sidebar">
+  <div class="sidebar-header">
+    <h3>Scene Parameters</h3>
+  </div>
+  <div class="sidebar-content">
+
+    <div class="parameter-group">
+      <label for="rotate-x">Rotate X</label>
+      <input type="range" id="rotate-x" min="0" max="6.28" step="0.1" value="0.0">
+      <span id="rotate-x-value">0.0</span>
+    </div>
+    <div class="parameter-group">
+      <label for="rotate-y">Rotate Y</label>
+      <input type="range" id="rotate-y" min="0" max="6.28" step="0.1" value="0.785">
+      <span id="rotate-y-value">0.785</span>
+    </div>
+    <div class="parameter-group">
+      <label for="rotate-z">Rotate Z</label>
+      <input type="range" id="rotate-z" min="0" max="6.28" step="0.1" value="0.0">
+      <span id="rotate-z-value">0.0</span>
+    </div>
+    <div class="parameter-group">
+      <label for="translate-z">Translate Z</label>
+      <input type="range" id="translate-z" min="-10" max="10" step="0.1" value="-0.5">
+      <span id="translate-z-value">-0.5</span>
+    </div>
+
+  </div>
+</div>
+<button id="sidebar-toggle" class="sidebar-toggle">⚙️</button>
+
+<style>
+  .sidebar {
+    position: fixed;
+    top: 0;
+    right: -300px;
+    width: 300px;
+    height: 100vh;
+    background: rgba(30, 30, 30, 0.95);
+    color: white;
+    transition: right 0.3s ease;
+    z-index: 1000;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow-y: auto;
+  }
+  
+  .sidebar.open {
+    right: 0;
+  }
+  
+  .sidebar-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    background: rgba(30, 30, 30, 0.8);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 1001;
+    transition: background 0.3s ease;
+  }
+  
+  .sidebar-toggle:hover {
+    background: rgba(30, 30, 30, 1);
+  }
+  
+  .sidebar-header h3 {
+    margin: 0 0 20px 0;
+    font-size: 18px;
+    border-bottom: 1px solid #555;
+    padding-bottom: 10px;
+  }
+  
+  .parameter-group {
+    margin-bottom: 20px;
+  }
+  
+  .parameter-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+  }
+  
+  .parameter-group input[type="range"] {
+    width: 100%;
+    margin-bottom: 5px;
+  }
+  
+  .parameter-group span {
+    font-size: 12px;
+    color: #ccc;
+  }
+  
+  .section-separator {
+    border-top: 1px solid #555;
+    margin: 20px 0 10px 0;
+  }
+  
+  .sidebar-content h4 {
+    margin: 10px 0 15px 0;
+    font-size: 14px;
+    color: #aaa;
+  }
+</style>
+
+<script>
+  // Sidebar functionality
+  const sidebar = document.getElementById('sidebar');
+  const toggleButton = document.getElementById('sidebar-toggle');
+  
+  toggleButton.addEventListener('click', function() {
+    sidebar.classList.toggle('open');
+  });
+
+  // Function to initialize sliders after Module is ready
+  function initializeSliders() {
+    const sliders = ['rotate-x', 'rotate-y', 'rotate-z', 'translate-z',];
+    
+    sliders.forEach(sliderId => {
+      const slider = document.getElementById(sliderId);
+      const valueSpan = document.getElementById(sliderId + '-value');
+      
+      slider.addEventListener('input', function() {
+        const value = parseFloat(this.value);
+        valueSpan.textContent = value.toFixed(1);
+        
+        // Convert slider ID to parameter name
+        const paramName = sliderId.replace('-', '_');
+        
+        // Call C function - with retry mechanism
+        function tryCallParameter() {
+          if (typeof Module !== 'undefined' && Module.ccall && Module._set_parameter) {
+            console.log('Calling set_parameter with:', paramName, value);
+            try {
+              Module.ccall('set_parameter', null, ['string', 'number'], [paramName, value]);
+            } catch (error) {
+              console.error('Error calling set_parameter:', error);
+            }
+          } else {
+            console.warn('Module not ready, retrying in 100ms...', {
+              Module: typeof Module,
+              ccall: !!Module?.ccall, 
+              set_parameter: !!Module?._set_parameter
+            });
+            // Retry after a short delay
+            setTimeout(tryCallParameter, 100);
+          }
+        }
+        
+        tryCallParameter();
+      });
+    });
+  }
+</script>
+<! -- END SIDEBAR -->
+
+<script>
+  // Function to set canvas size and notify C code
+  function updateCanvasSize() {
+    const canvas = document.getElementById('canvas');
+    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+    const rect = canvas.getBoundingClientRect();
+    const width = Math.floor(rect.width);
+    const height = Math.floor(rect.height);
+    
+    // Set canvas internal resolution to match display size
+    canvas.width = width;
+    canvas.height = height;
+    
+    // Call C function if Module is ready
+    if (typeof Module !== 'undefined' && Module.ccall) {
+      Module.ccall('set_canvas_size', null, ['number', 'number'], [width, height]);
+    }
+  }
+  
+  // Set up Module callbacks
+  var Module = {
+    onRuntimeInitialized: function() {
+      console.log('WebGPU Module initialized');
+      updateCanvasSize(); // Set initial size
+      initializeSliders(); // Initialize sliders after Module is ready
+      
+      // Set up resize handlers only after module is ready
+      window.addEventListener('resize', function() {
+        setTimeout(updateCanvasSize, 10); // Small delay to ensure layout is complete
+      });
+      
+    }
+  };
+</script>
+
+<script async type="text/javascript" src="index.js"></script>
+</body>
+</html>
